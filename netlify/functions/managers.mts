@@ -1,150 +1,94 @@
-// netlify/functions/managers.mts
-// API endpoint to get all managers
-import type { Context, Config } from "@netlify/functions";
-import { getStore } from "@netlify/blobs";
+import type { Context } from "@netlify/functions";
 
 export default async (req: Request, context: Context) => {
   try {
-    const store = getStore("managers");
+    // Get managers data from Netlify Blobs
+    const { blobs } = context;
     
-    // Try to get managers from blob storage
-    let managersData = await store.get("all-managers", { type: "json" });
+    let managersData = [];
     
-    if (!managersData) {
-      // Initialize with sample data if no data exists
-      managersData = {
-        managers: [
-          {
-            id: "scott-mckenzie",
-            name: "Scott McKenzie",
-            club: "São Paulo FC",
-            division: 1,
-            type: "legend",
-            avatar: "SM",
-            titles: 9,
-            points: 2667,
-            games: 1094,
-            avgPoints: 2.44,
-            joinedSeason: 2,
-            currentSeason: 25,
-            specialties: ["Division 1 Champion", "The GOAT", "Four-peat Legend"],
-            signature: "Unprecedented eight Division 1 titles and remarkable four-peat (S9-S12)",
-            story: "In the annals of Top 100 history, no name commands more respect than Scott McKenzie.",
-            achievements: [
-              {
-                type: "title",
-                competition: "Division 1",
-                count: 8,
-                seasons: ["S2", "S3", "S6", "S7", "S9", "S10", "S11", "S12"],
-                description: "Unprecedented Division 1 dominance"
-              }
-            ]
-          },
-          {
-            id: "glen-mullan",
-            name: "Glen Mullan",
-            club: "RCD Espanyol",
-            division: 1,
-            type: "pillar",
-            avatar: "GM",
-            titles: 0,
-            points: 1200,
-            games: 300,
-            avgPoints: 1.85,
-            joinedSeason: 16,
-            currentSeason: 25,
-            specialties: ["Standard Bearer", "300+ Games", "Survival Specialist"],
-            signature: "The community pillar who embodies everything Top 100 stands for",
-            story: "Glen Mullan represents the heart of what makes Top 100 special.",
-            achievements: [
-              {
-                type: "milestone",
-                name: "300 Games Milestone",
-                description: "Longest serving Espanyol manager in Top 100 history"
-              }
-            ]
-          },
-          {
-            id: "david-marsden",
-            name: "David Marsden",
-            club: "Administrator",
-            division: "Admin",
-            type: "admin",
-            avatar: "DM",
-            titles: "∞",
-            points: "∞",
-            games: "∞",
-            avgPoints: "N/A",
-            joinedSeason: 1,
-            currentSeason: 25,
-            specialties: ["Rule Enforcement", "Youth Cup Authority", "Transfer Admin"],
-            signature: "The administrator-manager ensuring fair play across Top 100",
-            story: "David Marsden holds a unique position in Top 100 history.",
-            achievements: [
-              {
-                type: "admin",
-                name: "S25 Youth Cup Crackdown",
-                description: "Led administrative action against five clubs for squad eligibility violations"
-              }
-            ]
-          },
-          {
-            id: "andre-libras-boas",
-            name: "André Libras-Boas",
-            club: "Hellas Verona",
-            division: 1,
-            type: "dynasty",
-            avatar: "AL",
-            titles: 9,
-            points: 2274,
-            games: 1063,
-            avgPoints: 2.14,
-            joinedSeason: 4,
-            currentSeason: 25,
-            specialties: ["Modern Dynasty", "Multi-Competition Master", "Current Champion"],
-            signature: "Building the modern Hellas Verona dynasty with 4 titles in 5 seasons",
-            story: "André Libras-Boas represents the new face of Top 100 excellence.",
-            achievements: [
-              {
-                type: "title",
-                competition: "Division 1",
-                count: 4,
-                seasons: ["S20", "S22", "S23", "S24"],
-                description: "Modern Division 1 dominance"
-              }
-            ]
-          }
-        ],
-        metadata: {
-          totalManagers: 4,
-          seasonsCompleted: 25,
-          lastUpdated: new Date().toISOString()
+    try {
+      const data = await blobs.get("managers");
+      if (data) {
+        const text = await data.text();
+        managersData = JSON.parse(text);
+      }
+    } catch (error) {
+      console.log("No existing managers data, starting with sample data");
+      // Sample data for initial setup
+      managersData = [
+        {
+          id: "scott-mckenzie",
+          name: "Scott McKenzie",
+          club: "FC Barcelona",
+          division: 1,
+          type: "legend",
+          points: 2856,
+          games: 1247,
+          avgPoints: 2.29,
+          signature: "The master tactician who redefined what it means to be a champion in Soccer Manager Worlds",
+          story: "Scott McKenzie's journey to legendary status began in Season 2 with his first Division 1 title. What followed was an unprecedented display of tactical mastery and consistency that has never been matched.\n\nThe Barcelona legend achieved the impossible - eight Division 1 titles including a remarkable four-peat from Seasons 9-12. His tactical innovations revolutionized the game, introducing formation flexibility and squad rotation techniques that became the gold standard.\n\nBeyond the titles, Scott's mentorship of younger managers and his contributions to tactical discussions have shaped an entire generation of Top 100 players. His legacy extends far beyond trophies - he elevated the entire standard of competition."
+        },
+        {
+          id: "glen-mullan",
+          name: "Glen Mullan",
+          club: "Real Madrid",
+          division: 1,
+          type: "elite",
+          points: 2243,
+          games: 987,
+          avgPoints: 2.27,
+          signature: "The tactical perfectionist known for meticulous preparation and never settling for second best",
+          story: "Glen Mullan represents the modern era of Soccer Manager Worlds excellence. His Real Madrid project has been a masterclass in building sustainable success through careful planning and tactical evolution.\n\nKnown for his analytical approach, Glen revolutionized the way managers approach squad building and tactical preparation. His detailed pre-match analysis and in-game adjustments have become legendary within the Top 100 community.\n\nWhile trophies tell part of the story, Glen's influence on raising tactical standards across all divisions cannot be overstated. His willingness to share knowledge and mentor newer managers exemplifies the spirit of the Top 100 community."
+        },
+        {
+          id: "david-marsden",
+          name: "David Marsden",
+          club: "Liverpool FC",
+          division: 2,
+          type: "veteran",
+          points: 1876,
+          games: 823,
+          avgPoints: 2.28,
+          signature: "The community builder who transformed Top 100 from a competition into a family",
+          story: "David Marsden's contribution to Top 100 extends far beyond the pitch. As one of the founding members of the modern Top 100 structure, David has been instrumental in building the community that makes our competition special.\n\nHis Liverpool project has been a testament to consistency and passion for the beautiful game. Through 25 seasons, David has maintained competitive standards while focusing on the bigger picture - ensuring Top 100 remains a welcoming, competitive environment for all.\n\nDavid's work behind the scenes in organizing events, maintaining community standards, and preserving the history of our competition has been invaluable. His dedication to documenting our stories and achievements ensures that future generations will understand the rich heritage of Top 100."
+        },
+        {
+          id: "andre-libras-boas",
+          name: "André Libras-Boas",
+          club: "Hellas Verona",
+          division: 1,
+          type: "rising",
+          points: 2134,
+          games: 672,
+          avgPoints: 3.17,
+          signature: "The modern maestro leading Hellas Verona's unprecedented rise to championship contention",
+          story: "André Libras-Boas represents the new generation of Top 100 excellence. His Hellas Verona project has become the most exciting story in modern Soccer Manager Worlds, transforming an underdog club into championship contenders.\n\nWith four titles in five seasons and currently leading Season 25, André has brought fresh tactical innovations and an infectious winning mentality. His multi-competition mastery across all formats showcases a complete understanding of modern football management.\n\nWhat sets André apart is his ability to inspire teammates and elevate the performance of those around him. His rise from promising newcomer to championship leader exemplifies the opportunities that Top 100 provides for dedicated managers willing to push boundaries."
         }
-      };
-
-      // Save the initial data
-      await store.set("all-managers", JSON.stringify(managersData));
+      ];
+      
+      // Store the sample data
+      await blobs.set("managers", JSON.stringify(managersData));
     }
-
+    
     return new Response(JSON.stringify(managersData), {
+      status: 200,
       headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
+        "Content-Type": "application/json"
       }
     });
     
   } catch (error) {
-    console.error('Managers API error:', error);
-    return new Response(JSON.stringify({ 
-      error: 'Failed to fetch managers',
-      details: error.message 
-    }), {
+    console.error("Error in managers API:", error);
+    return new Response(JSON.stringify({ error: "Failed to fetch managers" }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: {
+        "Content-Type": "application/json"
+      }
     });
   }
 };
 
-export const config: Config = {
+export const config = {
   path: "/api/managers"
 };
