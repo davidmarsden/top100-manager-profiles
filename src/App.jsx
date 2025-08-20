@@ -577,4 +577,70 @@ const App = () => {
                 }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#059669' }}>
-                      {fo
+                      {formatPoints(manager.points)}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Points</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#2563eb' }}>
+                      {manager.games}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Games</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#7c2d12' }}>
+                      {formatAvgPoints(manager.avgPoints)}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Avg</div>
+                  </div>
+                </div>
+
+                {manager.signature && (
+                  <p style={{
+                    fontSize: '0.9rem',
+                    fontStyle: 'italic',
+                    color: '#4b5563',
+                    marginBottom: '1rem',
+                    overflow: 'hidden',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical'
+                  }}>
+                    "{manager.signature}"
+                  </p>
+                )}
+
+                <div style={{ textAlign: 'center' }}>
+                  <span style={{ color: '#059669', fontWeight: '500' }}>
+                    View Profile →
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {filteredManagers.length === 0 && !loading && (
+          <div style={{ textAlign: 'center', padding: '3rem' }}>
+            <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: '#f9fafb' }}>
+              No managers found
+            </div>
+            <p style={{ color: '#d1fae5' }}>Try adjusting your search criteria</p>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{ textAlign: 'center', marginTop: '4rem', paddingBottom: '2rem' }}>
+          <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: '#d1fae5' }}>
+            ⚽ Celebrating 25 Seasons of Soccer Manager Worlds Excellence ⚽
+          </p>
+          <p style={{ color: '#6ee7b7' }}>
+            Part of the Top 100 Community • Est. 2000
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;
