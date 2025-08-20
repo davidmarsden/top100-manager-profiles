@@ -1,83 +1,112 @@
-// netlify/functions/profile-request.mts
-// API endpoint for community profile requests
-import type { Context, Config } from "@netlify/functions";
-import { getStore } from "@netlify/blobs";
+import type { Context } from "@netlify/functions";
 
 export default async (req: Request, context: Context) => {
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+  if (req.method === 'POST') {
+    return handleProfileRequest(req, context);
+  } else if (req.method === 'GET') {
+    return getProfileRequests(req, context);
+  } else {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { "Content-Type": "application/json" }
     });
   }
+};
 
+async function handleProfileRequest(req: Request, context: Context) {
   try {
-    const requestData = await req.json();
-    const { requestedManager, requesterName, reason, priority } = requestData;
+    const { blobs } = context;
+    const request = await req.json();
     
     // Validate required fields
-    if (!requestedManager || !requesterName) {
-      return new Response(JSON.stringify({ 
-        error: 'Manager name and requester name are required' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    const requiredFields = ['managerName', 'clubName', 'contactInfo'];
+    for (const field of requiredFields) {
+      if (!request[field]) {
+        return new Response(JSON.stringify({ error: `Missing required field: ${field}` }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
     }
-
-    const store = getStore("profile-requests");
+    
+    // Create profile request object
+    const profileRequest = {
+      id: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      managerName: request.managerName,
+      clubName: request.clubName,
+      contactInfo: request.contactInfo,
+      division: request.division || null,
+      achievements: request.achievements || '',
+      story: request.story || '',
+      timestamp: new Date().toISOString(),
+      status: 'pending'
+    };
     
     // Get existing requests
-    const existingRequests = await store.get("all-requests", { type: "json" }) || { 
-      requests: [] 
-    };
-    
-    // Create new request
-    const newRequest = {
-      id: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      requestedManager: requestedManager.trim(),
-      requesterName: requesterName.trim(),
-      reason: reason?.trim() || 'No reason provided',
-      priority: priority || 'normal',
-      status: 'pending',
-      createdAt: new Date().toISOString()
-    };
-    
-    // Add to existing requests
-    existingRequests.requests.unshift(newRequest); // Add to beginning for newest first
-    
-    // Keep only the latest 100 requests to prevent unlimited growth
-    if (existingRequests.requests.length > 100) {
-      existingRequests.requests = existingRequests.requests.slice(0, 100);
+    let requestsData = [];
+    try {
+      const data = await blobs.get("profile-requests");
+      if (data) {
+        const text = await data.text();
+        requestsData = JSON.parse(text);
+      }
+    } catch (error) {
+      console.log("No existing profile requests found");
     }
     
-    // Save updated requests
-    await store.set("all-requests", JSON.stringify(existingRequests));
-
-    return new Response(JSON.stringify({
-      success: true,
-      requestId: newRequest.id,
-      message: 'Profile request submitted successfully',
-      estimatedCompletion: '3-5 days'
+    // Add new request
+    requestsData.push(profileRequest);
+    
+    // Save updated data
+    await blobs.set("profile-requests", JSON.stringify(requestsData));
+    
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: "Profile request submitted successfully",
+      requestId: profileRequest.id
     }), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
+      status: 200,
+      headers: { "Content-Type": "application/json" }
     });
     
   } catch (error) {
-    console.error('Profile request error:', error);
-    return new Response(JSON.stringify({ 
-      error: 'Failed to submit profile request',
-      details: error.message 
-    }), {
+    console.error("Error submitting profile request:", error);
+    return new Response(JSON.stringify({ error: "Failed to submit profile request" }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { "Content-Type": "application/json" }
     });
   }
-};
+}
 
-export const config: Config = {
-  path: "/api/profile-request"
-};
+async function getProfileRequests(req: Request, context: Context) {
+  try {
+    const { blobs } = context;
+    
+    // Get profile requests data
+    let requestsData = [];
+    try {
+      const data = await blobs.get("profile-requests");
+      if (data) {
+        const text = await data.text();
+        requestsData = JSON.parse(text);
+      }
+    } catch (error) {
+      console.log("No profile requests found");
+    }
+    
+    // Sort by timestamp (newest first)
+    requestsData.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    
+    return new Response(JSON.stringify(requestsData), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+    
+  } catch (error) {
+    console.error("Error fetching profile requests:", error);
+    return new Response(JSON.stringify({ error: "Failed to fetch profile requests" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
