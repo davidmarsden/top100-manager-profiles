@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Top 100 Manager Profiles</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            color: #1e3c72;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card h2 {
+            color: #1e3c72;
+            margin-bottom: 1rem;
+            font-size: 1.4rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .request-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .request-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .request-name {
+            font-weight: bold;
+            color: #1e3c72;
+            font-size: 1.1rem;
+        }
+        
+        .request-club {
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+        
+        .request-date {
+            color: #999;
+            font-size: 0.9rem;
+        }
+        
+        .request-story {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #1e3c72;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-right: 0.5rem;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+        
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 0.5rem;
+            }
+            
+            .card {
+                padding: 1rem;
+            }
+            
+            .request-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏆 Admin Dashboard - Manager Profiles</h1>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+            <h2>📊 Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number" id="total-managers">-</div>
+                    <div class="stat-label">Total Managers</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="pending-requests">-</div>
+                    <div class="stat-label">Pending Requests</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="division-1">-</div>
+                    <div class="stat-label">Division 1 Managers</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="legends">-</div>
+                    <div class="stat-label">Legends</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>📝 Profile Requests</h2>
+            <div id="requests-container">
+                <div class="loading">Loading requests...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadData() {
+            try {
+                // Load managers
+                const managersResponse = await fetch('/api/managers');
+                const managers = await managersResponse.json();
+                
+                // Load profile requests
+                const requestsResponse = await fetch('/api/profile-request');
+                const requests = await requestsResponse.json();
+                
+                updateStats(managers, requests);
+                displayRequests(requests);
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('requests-container').innerHTML = 
+                    '<div class="empty-state">❌ Error loading data</div>';
+            }
+        }
+        
+        function updateStats(managers, requests) {
+            document.getElementById('total-managers').textContent = managers.length;
+            document.getElementById('pending-requests').textContent = requests.filter(r => r.status === 'pending').length;
+            document.getElementById('division-1').textContent = managers.filter(m => m.division === 1).length;
+            document.getElementById('legends').textContent = managers.filter(m => m.type === 'legend').length;
+        }
+        
+        function displayRequests(requests) {
+            const container = document.getElementById('requests-container');
+            
+            if (requests.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <h3>No profile requests</h3>
+                        <p>All caught up! No pending profile requests at the moment.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = requests.map(request => `
+                <div class="request-item">
+                    <div class="request-header">
+                        <div>
+                            <div class="request-name">${escapeHtml(request.managerName)}</div>
+                            <div class="request-club">${escapeHtml(request.clubName)}</div>
+                            ${request.division ? `<div class="request-club">Division ${request.division}</div>` : ''}
+                        </div>
+                        <div class="request-date">
+                            ${new Date(request.timestamp).toLocaleDateString()}
+                        </div>
+                    </div>
+                    
+                    <div><strong>Contact:</strong> ${escapeHtml(request.contactInfo)}</div>
+                    
+                    ${request.achievements ? `
+                        <div style="margin-top: 0.5rem;">
+                            <strong>Achievements:</strong> ${escapeHtml(request.achievements)}
+                        </div>
+                    ` : ''}
+                    
+                    ${request.story ? `
+                        <div class="request-story">
+                            <strong>Story:</strong><br>
+                            ${escapeHtml(request.story).replace(/\n/g, '<br>')}
+                        </div>
+                    ` : ''}
+                    
+                    <div style="margin-top: 1rem;">
+                        <button class="btn" onclick="copyToClipboard('${request.id}')">
+                            📋 Copy Details
+                        </button>
+                        <button class="btn btn-secondary" onclick="markAsProcessed('${request.id}')">
+                            ✅ Mark Processed
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function copyToClipboard(requestId) {
+            // Find the request
+            const requests = window.currentRequests || [];
+            const request = requests.find(r => r.id === requestId);
+            
+            if (request) {
+                const text = `Manager Name: ${request.managerName}
+Club: ${request.clubName}
+${request.division ? `Division: ${request.division}` : ''}
+Contact: ${request.contactInfo}
+${request.achievements ? `Achievements: ${request.achievements}` : ''}
+${request.story ? `Story: ${request.story}` : ''}
+Submitted: ${new Date(request.timestamp).toLocaleString()}`;
+                
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('Request details copied to clipboard!');
+                });
+            }
+        }
+        
+        async function markAsProcessed(requestId) {
+            if (confirm('Mark this request as processed?')) {
+                // In a real implementation, you'd update the request status
+                alert('Request marked as processed! (Feature to be implemented)');
+                loadData(); // Reload data
+            }
+        }
+        
+        // Load data on page load
+        loadData();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadData, 30000);
+    </script>
+</body>
+</html>
