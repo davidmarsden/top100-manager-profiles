@@ -1,6 +1,20 @@
 import type { Context } from "@netlify/functions";
 
 export default async (req: Request, context: Context) => {
+  console.log('Profile Request API called with method:', req.method);
+  
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    });
+  }
+  
   if (req.method === 'POST') {
     return handleProfileRequest(req, context);
   } else if (req.method === 'GET') {
@@ -8,23 +22,32 @@ export default async (req: Request, context: Context) => {
   } else {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { "Content-Type": "application/json" }
+      headers: { 
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+      }
     });
   }
 };
 
 async function handleProfileRequest(req: Request, context: Context) {
   try {
+    console.log('Handling profile request submission...');
     const { blobs } = context;
     const request = await req.json();
+    console.log('Received request data:', request);
     
     // Validate required fields
     const requiredFields = ['managerName', 'clubName', 'contactInfo'];
     for (const field of requiredFields) {
       if (!request[field]) {
+        console.log('Missing required field:', field);
         return new Response(JSON.stringify({ error: `Missing required field: ${field}` }), {
           status: 400,
-          headers: { "Content-Type": "application/json" }
+          headers: { 
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
+          }
         });
       }
     }
@@ -42,23 +65,34 @@ async function handleProfileRequest(req: Request, context: Context) {
       status: 'pending'
     };
     
+    console.log('Created profile request:', profileRequest);
+    
     // Get existing requests
     let requestsData = [];
     try {
+      console.log('Getting existing requests...');
       const data = await blobs.get("profile-requests");
       if (data) {
         const text = await data.text();
         requestsData = JSON.parse(text);
+        console.log('Found existing requests:', requestsData.length);
       }
     } catch (error) {
-      console.log("No existing profile requests found");
+      console.log("No existing profile requests found, starting fresh");
     }
     
     // Add new request
     requestsData.push(profileRequest);
     
-    // Save updated data
-    await blobs.set("profile-requests", JSON.stringify(requestsData));
+    try {
+      // Save updated data
+      console.log('Saving updated requests data...');
+      await blobs.set("profile-requests", JSON.stringify(requestsData));
+      console.log('Request data saved successfully');
+    } catch (saveError) {
+      console.error('Error saving request to blobs:', saveError);
+      throw new Error('Failed to save profile request');
+    }
     
     return new Response(JSON.stringify({ 
       success: true, 
@@ -66,20 +100,30 @@ async function handleProfileRequest(req: Request, context: Context) {
       requestId: profileRequest.id
     }), {
       status: 200,
-      headers: { "Content-Type": "application/json" }
+      headers: { 
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+      }
     });
     
   } catch (error) {
     console.error("Error submitting profile request:", error);
-    return new Response(JSON.stringify({ error: "Failed to submit profile request" }), {
+    return new Response(JSON.stringify({ 
+      error: "Failed to submit profile request",
+      details: error.message 
+    }), {
       status: 500,
-      headers: { "Content-Type": "application/json" }
+      headers: { 
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+      }
     });
   }
 }
 
 async function getProfileRequests(req: Request, context: Context) {
   try {
+    console.log('Getting profile requests...');
     const { blobs } = context;
     
     // Get profile requests data
@@ -89,6 +133,7 @@ async function getProfileRequests(req: Request, context: Context) {
       if (data) {
         const text = await data.text();
         requestsData = JSON.parse(text);
+        console.log('Retrieved requests:', requestsData.length);
       }
     } catch (error) {
       console.log("No profile requests found");
@@ -99,14 +144,27 @@ async function getProfileRequests(req: Request, context: Context) {
     
     return new Response(JSON.stringify(requestsData), {
       status: 200,
-      headers: { "Content-Type": "application/json" }
+      headers: { 
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+      }
     });
     
   } catch (error) {
     console.error("Error fetching profile requests:", error);
-    return new Response(JSON.stringify({ error: "Failed to fetch profile requests" }), {
+    return new Response(JSON.stringify({ 
+      error: "Failed to fetch profile requests",
+      details: error.message 
+    }), {
       status: 500,
-      headers: { "Content-Type": "application/json" }
+      headers: { 
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+      }
     });
   }
 }
+
+export const config = {
+  path: "/api/profile-request"
+};
