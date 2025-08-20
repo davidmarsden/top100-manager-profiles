@@ -72,7 +72,7 @@ export default async (req: Request, context: Context) => {
           avgPoints: 2.14
           signature: "The modern maestro leading Hellas Verona's unprecedented rise to championship contention",
           story: "Luis André Libras-Boas represents the new generation of Top 100 excellence. His Hellas Verona project has become the most exciting story in modern Soccer Manager Worlds, transforming an underdog club into championship contenders.\n\nWith four titles in five seasons and currently leading Season 25, Luis André has brought fresh tactical innovations and an infectious winning mentality. His multi-competition mastery across all formats showcases a complete understanding of modern football management.\n\nWhat sets Luis André apart is his ability to inspire teammates and elevate the performance of those around him. His rise from promising newcomer to championship leader exemplifies the opportunities that Top 100 provides for dedicated managers willing to push boundaries."
-        }
+        },
       ];
       
       try {
