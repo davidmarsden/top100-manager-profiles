@@ -63,6 +63,18 @@ const App = () => {
           avgPoints: 2.27,
           signature: "The tactical perfectionist known for meticulous preparation",
           story: "Glen Mullan represents the modern era of excellence..."
+        },
+        {
+          id: "david-marsden",
+          name: "David Marsden",
+          club: "Liverpool FC",
+          division: 2,
+          type: "veteran",
+          points: 1876,
+          games: 823,
+          avgPoints: 2.28,
+          signature: "The community builder who transformed Top 100",
+          story: "David Marsden's contribution extends far beyond the pitch..."
         }
       ];
       setManagers(sampleData);
@@ -92,25 +104,25 @@ const App = () => {
     return avg?.toFixed(2) || '0.00';
   };
 
-  const getDivisionBadgeColor = (division) => {
-    const colors = {
-      1: 'background: linear-gradient(to right, #fbbf24, #f59e0b); color: #92400e;',
-      2: 'background: linear-gradient(to right, #d1d5db, #9ca3af); color: #374151;',
-      3: 'background: linear-gradient(to right, #d97706, #b45309); color: #fbbf24;',
-      4: 'background: linear-gradient(to right, #10b981, #059669); color: #ecfdf5;',
-      5: 'background: linear-gradient(to right, #3b82f6, #1d4ed8); color: #dbeafe;'
-    };
-    return colors[division] || 'background: #6b7280; color: white;';
-  };
-
-  const getTypeBadgeColor = (type) => {
-    const colors = {
-      'legend': 'background: linear-gradient(to right, #7c3aed, #5b21b6); color: #e5e7eb;',
-      'elite': 'background: linear-gradient(to right, #dc2626, #b91c1c); color: #fee2e2;',
-      'rising': 'background: linear-gradient(to right, #2563eb, #1d4ed8); color: #dbeafe;',
-      'veteran': 'background: linear-gradient(to right, #059669, #047857); color: #d1fae5;'
-    };
-    return colors[type] || 'background: #6b7280; color: white;';
+  const getBadgeStyle = (type, division) => {
+    if (type === 'division') {
+      const colors = {
+        1: { background: '#fbbf24', color: '#92400e' },
+        2: { background: '#d1d5db', color: '#374151' },
+        3: { background: '#d97706', color: '#fbbf24' },
+        4: { background: '#10b981', color: '#ecfdf5' },
+        5: { background: '#3b82f6', color: '#dbeafe' }
+      };
+      return colors[division] || { background: '#6b7280', color: 'white' };
+    } else {
+      const colors = {
+        'legend': { background: '#7c3aed', color: '#e5e7eb' },
+        'elite': { background: '#dc2626', color: '#fee2e2' },
+        'rising': { background: '#2563eb', color: '#dbeafe' },
+        'veteran': { background: '#059669', color: '#d1fae5' }
+      };
+      return colors[type] || { background: '#6b7280', color: 'white' };
+    }
   };
 
   // Debug info
@@ -135,9 +147,10 @@ const App = () => {
             padding: '1rem 2rem',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
+            flexWrap: 'wrap'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
               <button
                 onClick={() => setSelectedManager(null)}
                 style={{
@@ -146,7 +159,10 @@ const App = () => {
                   color: '#d1fae5',
                   cursor: 'pointer',
                   fontSize: '1rem',
-                  fontWeight: '500'
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
                 }}
               >
                 ← Back to Managers
@@ -174,20 +190,34 @@ const App = () => {
             boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
             color: '#374151'
           }}>
-            <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1f2937' }}>
+            <h1 style={{ 
+              fontSize: '2.5rem', 
+              fontWeight: 'bold', 
+              marginBottom: '0.5rem', 
+              color: '#1f2937' 
+            }}>
               {selectedManager.name}
             </h1>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#6b7280' }}>
+            <h2 style={{ 
+              fontSize: '1.5rem', 
+              marginBottom: '1rem', 
+              color: '#6b7280' 
+            }}>
               {selectedManager.club}
             </h2>
             
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+            <div style={{ 
+              display: 'flex', 
+              gap: '1rem', 
+              marginBottom: '2rem', 
+              flexWrap: 'wrap' 
+            }}>
               <span style={{
                 padding: '0.5rem 1rem',
                 borderRadius: '25px',
                 fontSize: '0.9rem',
                 fontWeight: 'bold',
-                ...{ [getDivisionBadgeColor(selectedManager.division).split(';')[0].split(':')[0]]: getDivisionBadgeColor(selectedManager.division).split(';')[0].split(':')[1] }
+                ...getBadgeStyle('division', selectedManager.division)
               }}>
                 Division {selectedManager.division}
               </span>
@@ -196,7 +226,7 @@ const App = () => {
                 borderRadius: '25px',
                 fontSize: '0.9rem',
                 fontWeight: 'bold',
-                ...{ [getTypeBadgeColor(selectedManager.type).split(';')[0].split(':')[0]]: getTypeBadgeColor(selectedManager.type).split(';')[0].split(':')[1] }
+                ...getBadgeStyle('type', selectedManager.type)
               }}>
                 {selectedManager.type.charAt(0).toUpperCase() + selectedManager.type.slice(1)}
               </span>
@@ -208,19 +238,34 @@ const App = () => {
               gap: '1rem',
               marginBottom: '2rem'
             }}>
-              <div style={{ textAlign: 'center', padding: '1rem', background: '#f0fdf4', borderRadius: '8px' }}>
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '1rem', 
+                background: '#f0fdf4', 
+                borderRadius: '8px' 
+              }}>
                 <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#166534' }}>
                   {formatPoints(selectedManager.points)}
                 </div>
                 <div style={{ fontSize: '0.9rem', color: '#16a34a' }}>Total Points</div>
               </div>
-              <div style={{ textAlign: 'center', padding: '1rem', background: '#eff6ff', borderRadius: '8px' }}>
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '1rem', 
+                background: '#eff6ff', 
+                borderRadius: '8px' 
+              }}>
                 <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1e40af' }}>
                   {selectedManager.games}
                 </div>
                 <div style={{ fontSize: '0.9rem', color: '#2563eb' }}>Games Played</div>
               </div>
-              <div style={{ textAlign: 'center', padding: '1rem', background: '#faf5ff', borderRadius: '8px' }}>
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '1rem', 
+                background: '#faf5ff', 
+                borderRadius: '8px' 
+              }}>
                 <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#7c2d12' }}>
                   {formatAvgPoints(selectedManager.avgPoints)}
                 </div>
@@ -230,7 +275,12 @@ const App = () => {
 
             {selectedManager.signature && (
               <div style={{ marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1f2937' }}>
+                <h3 style={{ 
+                  fontSize: '1.3rem', 
+                  fontWeight: 'bold', 
+                  marginBottom: '0.5rem', 
+                  color: '#1f2937' 
+                }}>
                   Signature Style
                 </h3>
                 <p style={{
@@ -247,7 +297,12 @@ const App = () => {
 
             {selectedManager.story && (
               <div>
-                <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1f2937' }}>
+                <h3 style={{ 
+                  fontSize: '1.3rem', 
+                  fontWeight: 'bold', 
+                  marginBottom: '0.5rem', 
+                  color: '#1f2937' 
+                }}>
                   Top 100 Journey
                 </h3>
                 <p style={{
@@ -283,12 +338,20 @@ const App = () => {
           padding: '1rem 2rem',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          flexWrap: 'wrap'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
             <a 
               href="https://smtop100.blog" 
-              style={{ color: '#d1fae5', textDecoration: 'none', fontWeight: '500' }}
+              style={{ 
+                color: '#d1fae5', 
+                textDecoration: 'none', 
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
             >
               ← Back to Main Site
             </a>
@@ -310,7 +373,7 @@ const App = () => {
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
           <h1 style={{
-            fontSize: '3rem',
+            fontSize: 'clamp(2rem, 5vw, 3rem)',
             fontWeight: 'bold',
             marginBottom: '1rem',
             color: '#f9fafb'
@@ -466,14 +529,6 @@ const App = () => {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
                 }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'translateY(-4px)';
-                  e.target.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.2)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.1)';
-                }}
               >
                 <div style={{
                   display: 'flex',
@@ -482,7 +537,12 @@ const App = () => {
                   marginBottom: '1rem'
                 }}>
                   <div>
-                    <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.25rem' }}>
+                    <h3 style={{ 
+                      fontSize: '1.3rem', 
+                      fontWeight: 'bold', 
+                      color: '#1f2937', 
+                      marginBottom: '0.25rem' 
+                    }}>
                       {manager.name}
                     </h3>
                     <p style={{ color: '#6b7280' }}>{manager.club}</p>
@@ -493,8 +553,7 @@ const App = () => {
                       borderRadius: '12px',
                       fontSize: '0.8rem',
                       fontWeight: 'bold',
-                      background: '#fbbf24',
-                      color: '#92400e'
+                      ...getBadgeStyle('division', manager.division)
                     }}>
                       Div {manager.division}
                     </span>
@@ -503,8 +562,7 @@ const App = () => {
                       borderRadius: '12px',
                       fontSize: '0.8rem',
                       fontWeight: 'bold',
-                      background: '#7c3aed',
-                      color: '#e5e7eb'
+                      ...getBadgeStyle('type', manager.type)
                     }}>
                       {manager.type}
                     </span>
@@ -519,16 +577,4 @@ const App = () => {
                 }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#059669' }}>
-                      {formatPoints(manager.points)}
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Points</div>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#2563eb' }}>
-                      {manager.games}
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Games</div>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#7c2d12' }}>
-   
+                      {fo
