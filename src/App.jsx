@@ -8,8 +8,10 @@ const App = () => {
   const [selectedDivision, setSelectedDivision] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
+    console.log('App component mounted, fetching managers...');
     fetchManagers();
   }, []);
 
@@ -19,13 +21,51 @@ const App = () => {
 
   const fetchManagers = async () => {
     try {
+      console.log('Fetching managers from /api/managers...');
       const response = await fetch('/api/managers');
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
+      console.log('Managers data received:', data);
       setManagers(data);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching managers:', error);
+      setError(error.message);
       setLoading(false);
+      
+      // Fallback to sample data if API fails
+      const sampleData = [
+        {
+          id: "scott-mckenzie",
+          name: "Scott McKenzie",
+          club: "FC Barcelona",
+          division: 1,
+          type: "legend",
+          points: 2856,
+          games: 1247,
+          avgPoints: 2.29,
+          signature: "The master tactician who redefined what it means to be a champion",
+          story: "Scott McKenzie's legendary journey in Top 100..."
+        },
+        {
+          id: "glen-mullan",
+          name: "Glen Mullan",
+          club: "Real Madrid",
+          division: 1,
+          type: "elite",
+          points: 2243,
+          games: 987,
+          avgPoints: 2.27,
+          signature: "The tactical perfectionist known for meticulous preparation",
+          story: "Glen Mullan represents the modern era of excellence..."
+        }
+      ];
+      setManagers(sampleData);
     }
   };
 
@@ -54,97 +94,152 @@ const App = () => {
 
   const getDivisionBadgeColor = (division) => {
     const colors = {
-      1: 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900',
-      2: 'bg-gradient-to-r from-gray-300 to-gray-500 text-gray-900',
-      3: 'bg-gradient-to-r from-amber-600 to-amber-800 text-amber-100',
-      4: 'bg-gradient-to-r from-green-500 to-green-700 text-green-100',
-      5: 'bg-gradient-to-r from-blue-500 to-blue-700 text-blue-100'
+      1: 'background: linear-gradient(to right, #fbbf24, #f59e0b); color: #92400e;',
+      2: 'background: linear-gradient(to right, #d1d5db, #9ca3af); color: #374151;',
+      3: 'background: linear-gradient(to right, #d97706, #b45309); color: #fbbf24;',
+      4: 'background: linear-gradient(to right, #10b981, #059669); color: #ecfdf5;',
+      5: 'background: linear-gradient(to right, #3b82f6, #1d4ed8); color: #dbeafe;'
     };
-    return colors[division] || 'bg-gray-500 text-white';
+    return colors[division] || 'background: #6b7280; color: white;';
   };
 
   const getTypeBadgeColor = (type) => {
     const colors = {
-      'legend': 'bg-gradient-to-r from-purple-600 to-purple-800 text-purple-100',
-      'elite': 'bg-gradient-to-r from-red-600 to-red-800 text-red-100',
-      'rising': 'bg-gradient-to-r from-blue-600 to-blue-800 text-blue-100',
-      'veteran': 'bg-gradient-to-r from-green-600 to-green-800 text-green-100'
+      'legend': 'background: linear-gradient(to right, #7c3aed, #5b21b6); color: #e5e7eb;',
+      'elite': 'background: linear-gradient(to right, #dc2626, #b91c1c); color: #fee2e2;',
+      'rising': 'background: linear-gradient(to right, #2563eb, #1d4ed8); color: #dbeafe;',
+      'veteran': 'background: linear-gradient(to right, #059669, #047857); color: #d1fae5;'
     };
-    return colors[type] || 'bg-gray-500 text-white';
+    return colors[type] || 'background: #6b7280; color: white;';
   };
+
+  // Debug info
+  console.log('App render - managers:', managers.length, 'filtered:', filteredManagers.length, 'loading:', loading, 'error:', error);
 
   if (selectedManager) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-green-900">
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #064e3b 100%)',
+        color: '#f3f4f6'
+      }}>
         {/* Navigation Header */}
-        <div className="bg-gradient-to-r from-green-800 to-green-900 border-b-2 border-green-600 shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => setSelectedManager(null)}
-                  className="text-green-100 hover:text-white transition-colors duration-200 flex items-center space-x-2"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
-                  <span className="font-medium">Back to Managers</span>
-                </button>
-                <div className="hidden sm:block text-green-300">|</div>
-                <a 
-                  href="https://smtop100.blog" 
-                  className="text-green-100 hover:text-white transition-colors duration-200 font-medium hidden sm:inline"
-                >
-                  Main Site
-                </a>
-              </div>
-              <div className="text-green-100 font-bold text-lg">Manager Profile</div>
+        <div style={{
+          background: 'linear-gradient(to right, #065f46, #064e3b)',
+          borderBottom: '2px solid #059669',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+        }}>
+          <div style={{
+            maxWidth: '1200px',
+            margin: '0 auto',
+            padding: '1rem 2rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <button
+                onClick={() => setSelectedManager(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#d1fae5',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '500'
+                }}
+              >
+                ← Back to Managers
+              </button>
+              <span style={{ color: '#6ee7b7' }}>|</span>
+              <a 
+                href="https://smtop100.blog" 
+                style={{ color: '#d1fae5', textDecoration: 'none', fontWeight: '500' }}
+              >
+                Main Site
+              </a>
+            </div>
+            <div style={{ color: '#f3f4f6', fontWeight: 'bold', fontSize: '1.2rem' }}>
+              Manager Profile
             </div>
           </div>
         </div>
 
         {/* Manager Profile */}
-        <div className="max-w-4xl mx-auto p-6">
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-8">
-            <div className="flex flex-col md:flex-row md:items-start md:space-x-8">
-              <div className="flex-1">
-                <h1 className="text-4xl font-bold text-gray-900 mb-2">{selectedManager.name}</h1>
-                <h2 className="text-2xl text-gray-700 mb-4">{selectedManager.club}</h2>
-                
-                <div className="flex flex-wrap gap-3 mb-6">
-                  <span className={`px-4 py-2 rounded-full text-sm font-bold ${getDivisionBadgeColor(selectedManager.division)}`}>
-                    Division {selectedManager.division}
-                  </span>
-                  <span className={`px-4 py-2 rounded-full text-sm font-bold ${getTypeBadgeColor(selectedManager.type)}`}>
-                    {selectedManager.type.charAt(0).toUpperCase() + selectedManager.type.slice(1)}
-                  </span>
-                </div>
+        <div style={{ maxWidth: '800px', margin: '2rem auto', padding: '0 1rem' }}>
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.95)',
+            borderRadius: '16px',
+            padding: '2rem',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
+            color: '#374151'
+          }}>
+            <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1f2937' }}>
+              {selectedManager.name}
+            </h1>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#6b7280' }}>
+              {selectedManager.club}
+            </h2>
+            
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+              <span style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '25px',
+                fontSize: '0.9rem',
+                fontWeight: 'bold',
+                ...{ [getDivisionBadgeColor(selectedManager.division).split(';')[0].split(':')[0]]: getDivisionBadgeColor(selectedManager.division).split(';')[0].split(':')[1] }
+              }}>
+                Division {selectedManager.division}
+              </span>
+              <span style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '25px',
+                fontSize: '0.9rem',
+                fontWeight: 'bold',
+                ...{ [getTypeBadgeColor(selectedManager.type).split(';')[0].split(':')[0]]: getTypeBadgeColor(selectedManager.type).split(';')[0].split(':')[1] }
+              }}>
+                {selectedManager.type.charAt(0).toUpperCase() + selectedManager.type.slice(1)}
+              </span>
+            </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-800">{formatPoints(selectedManager.points)}</div>
-                    <div className="text-sm text-green-600">Total Points</div>
-                  </div>
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-800">{selectedManager.games}</div>
-                    <div className="text-sm text-blue-600">Games Played</div>
-                  </div>
-                  <div className="text-center p-4 bg-purple-50 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-800">{formatAvgPoints(selectedManager.avgPoints)}</div>
-                    <div className="text-sm text-purple-600">Avg Points</div>
-                  </div>
-                  <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                    <div className="text-2xl font-bold text-yellow-800">#{Math.floor(Math.random() * 100) + 1}</div>
-                    <div className="text-sm text-yellow-600">Ranking</div>
-                  </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+              gap: '1rem',
+              marginBottom: '2rem'
+            }}>
+              <div style={{ textAlign: 'center', padding: '1rem', background: '#f0fdf4', borderRadius: '8px' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#166534' }}>
+                  {formatPoints(selectedManager.points)}
                 </div>
+                <div style={{ fontSize: '0.9rem', color: '#16a34a' }}>Total Points</div>
+              </div>
+              <div style={{ textAlign: 'center', padding: '1rem', background: '#eff6ff', borderRadius: '8px' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1e40af' }}>
+                  {selectedManager.games}
+                </div>
+                <div style={{ fontSize: '0.9rem', color: '#2563eb' }}>Games Played</div>
+              </div>
+              <div style={{ textAlign: 'center', padding: '1rem', background: '#faf5ff', borderRadius: '8px' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#7c2d12' }}>
+                  {formatAvgPoints(selectedManager.avgPoints)}
+                </div>
+                <div style={{ fontSize: '0.9rem', color: '#a855f7' }}>Avg Points</div>
               </div>
             </div>
 
             {selectedManager.signature && (
-              <div className="mb-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Signature Style</h3>
-                <p className="text-gray-700 text-lg italic border-l-4 border-green-500 pl-4">
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1f2937' }}>
+                  Signature Style
+                </h3>
+                <p style={{
+                  fontSize: '1.1rem',
+                  fontStyle: 'italic',
+                  borderLeft: '4px solid #059669',
+                  paddingLeft: '1rem',
+                  color: '#4b5563'
+                }}>
                   "{selectedManager.signature}"
                 </p>
               </div>
@@ -152,12 +247,16 @@ const App = () => {
 
             {selectedManager.story && (
               <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Top 100 Journey</h3>
-                <div className="prose max-w-none">
-                  <p className="text-gray-700 leading-relaxed whitespace-pre-line">
-                    {selectedManager.story}
-                  </p>
-                </div>
+                <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1f2937' }}>
+                  Top 100 Journey
+                </h3>
+                <p style={{
+                  lineHeight: '1.6',
+                  color: '#4b5563',
+                  whiteSpace: 'pre-line'
+                }}>
+                  {selectedManager.story}
+                </p>
               </div>
             )}
           </div>
@@ -167,65 +266,124 @@ const App = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-green-900">
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #064e3b 100%)',
+      color: '#f3f4f6'
+    }}>
       {/* Navigation Header */}
-      <div className="bg-gradient-to-r from-green-800 to-green-900 border-b-2 border-green-600 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <a 
-                href="https://smtop100.blog" 
-                className="text-green-100 hover:text-white transition-colors duration-200 flex items-center space-x-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                <span className="font-medium">Back to Main Site</span>
-              </a>
-              <div className="hidden sm:block text-green-300">|</div>
-              <a 
-                href="https://legends.smtop100.blog" 
-                className="text-green-100 hover:text-white transition-colors duration-200 font-medium hidden sm:inline"
-              >
-                Legends
-              </a>
-            </div>
-            <div className="text-green-100 font-bold text-lg">Manager Profiles</div>
+      <div style={{
+        background: 'linear-gradient(to right, #065f46, #064e3b)',
+        borderBottom: '2px solid #059669',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+      }}>
+        <div style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          padding: '1rem 2rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <a 
+              href="https://smtop100.blog" 
+              style={{ color: '#d1fae5', textDecoration: 'none', fontWeight: '500' }}
+            >
+              ← Back to Main Site
+            </a>
+            <span style={{ color: '#6ee7b7' }}>|</span>
+            <a 
+              href="https://legends.smtop100.blog" 
+              style={{ color: '#d1fae5', textDecoration: 'none', fontWeight: '500' }}
+            >
+              Legends
+            </a>
+          </div>
+          <div style={{ color: '#f3f4f6', fontWeight: 'bold', fontSize: '1.2rem' }}>
+            Manager Profiles
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6">
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1rem' }}>
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-white mb-4">
+        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+          <h1 style={{
+            fontSize: '3rem',
+            fontWeight: 'bold',
+            marginBottom: '1rem',
+            color: '#f9fafb'
+          }}>
             🏆 TOP 100 MANAGER PROFILES 🏆
           </h1>
-          <p className="text-green-100 text-xl max-w-3xl mx-auto leading-relaxed">
+          <p style={{
+            fontSize: '1.2rem',
+            maxWidth: '600px',
+            margin: '0 auto',
+            lineHeight: '1.6',
+            color: '#d1fae5'
+          }}>
             Celebrating 25 seasons of Soccer Manager Worlds excellence. Discover the stories, achievements, 
             and legendary journeys of our Top 100 community's finest managers.
           </p>
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.95)',
+          borderRadius: '12px',
+          padding: '1.5rem',
+          marginBottom: '2rem',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+        }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '1rem'
+          }}>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Search Managers</label>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontWeight: '600',
+                color: '#374151'
+              }}>
+                Search Managers
+              </label>
               <input
                 type="text"
                 placeholder="Search by name or club..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Division</label>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontWeight: '600',
+                color: '#374151'
+              }}>
+                Division
+              </label>
               <select
                 value={selectedDivision}
                 onChange={(e) => setSelectedDivision(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
               >
                 <option value="all">All Divisions</option>
                 <option value="1">Division 1</option>
@@ -236,11 +394,24 @@ const App = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Manager Type</label>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontWeight: '600',
+                color: '#374151'
+              }}>
+                Manager Type
+              </label>
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
               >
                 <option value="all">All Types</option>
                 <option value="legend">Legend</option>
@@ -252,91 +423,112 @@ const App = () => {
           </div>
         </div>
 
+        {/* Debug Info */}
+        {error && (
+          <div style={{
+            background: '#fee2e2',
+            color: '#991b1b',
+            padding: '1rem',
+            borderRadius: '8px',
+            marginBottom: '1rem'
+          }}>
+            ⚠️ API Error (using sample data): {error}
+          </div>
+        )}
+
         {/* Results Summary */}
-        <div className="text-center mb-6">
-          <p className="text-green-100 text-lg">
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <p style={{ fontSize: '1.1rem', color: '#d1fae5' }}>
             Showing {filteredManagers.length} of {managers.length} managers
           </p>
         </div>
 
         {/* Manager Grid */}
         {loading ? (
-          <div className="text-center py-12">
-            <div className="text-white text-xl">Loading managers...</div>
+          <div style={{ textAlign: 'center', padding: '3rem' }}>
+            <div style={{ fontSize: '1.2rem', color: '#f9fafb' }}>Loading managers...</div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '1.5rem'
+          }}>
             {filteredManagers.map((manager) => (
               <div
                 key={manager.id}
                 onClick={() => setSelectedManager(manager)}
-                className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer p-6"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  borderRadius: '12px',
+                  padding: '1.5rem',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-4px)';
+                  e.target.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.1)';
+                }}
               >
-                <div className="flex justify-between items-start mb-4">
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  marginBottom: '1rem'
+                }}>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900">{manager.name}</h3>
-                    <p className="text-gray-600">{manager.club}</p>
+                    <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.25rem' }}>
+                      {manager.name}
+                    </h3>
+                    <p style={{ color: '#6b7280' }}>{manager.club}</p>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getDivisionBadgeColor(manager.division)}`}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <span style={{
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '12px',
+                      fontSize: '0.8rem',
+                      fontWeight: 'bold',
+                      background: '#fbbf24',
+                      color: '#92400e'
+                    }}>
                       Div {manager.division}
                     </span>
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getTypeBadgeColor(manager.type)}`}>
+                    <span style={{
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '12px',
+                      fontSize: '0.8rem',
+                      fontWeight: 'bold',
+                      background: '#7c3aed',
+                      color: '#e5e7eb'
+                    }}>
                       {manager.type}
                     </span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-green-800">{formatPoints(manager.points)}</div>
-                    <div className="text-xs text-gray-600">Points</div>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '1rem',
+                  marginBottom: '1rem'
+                }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#059669' }}>
+                      {formatPoints(manager.points)}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Points</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-blue-800">{manager.games}</div>
-                    <div className="text-xs text-gray-600">Games</div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#2563eb' }}>
+                      {manager.games}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Games</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-purple-800">{formatAvgPoints(manager.avgPoints)}</div>
-                    <div className="text-xs text-gray-600">Avg</div>
-                  </div>
-                </div>
-
-                {manager.signature && (
-                  <p className="text-gray-700 text-sm italic line-clamp-2">
-                    "{manager.signature}"
-                  </p>
-                )}
-
-                <div className="mt-4 text-center">
-                  <span className="text-green-600 font-medium hover:text-green-800">
-                    View Profile →
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {filteredManagers.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <div className="text-white text-xl mb-2">No managers found</div>
-            <p className="text-green-100">Try adjusting your search criteria</p>
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="text-center mt-16 pb-8">
-          <p className="text-green-100 text-lg mb-2">
-            ⚽ Celebrating 25 Seasons of Soccer Manager Worlds Excellence ⚽
-          </p>
-          <p className="text-green-200">
-            Part of the Top 100 Community • Est. 2000
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default App;
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#7c2d12' }}>
+   
