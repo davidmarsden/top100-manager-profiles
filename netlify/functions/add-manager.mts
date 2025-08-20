@@ -1,94 +1,109 @@
-// netlify/functions/add-manager.mts
-// API endpoint to add new managers
-import type { Context, Config } from "@netlify/functions";
-import { getStore } from "@netlify/blobs";
+import type { Context } from "@netlify/functions";
 
 export default async (req: Request, context: Context) => {
-  // Only allow POST requests
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { "Content-Type": "application/json" }
     });
   }
 
   try {
-    const managerData = await req.json();
+    const { blobs } = context;
+    const newManager = await req.json();
     
     // Validate required fields
-    if (!managerData.id || !managerData.name) {
-      return new Response(JSON.stringify({ 
-        error: 'Manager ID and name are required' 
-      }), {
+    const requiredFields = ['id', 'name', 'club', 'division', 'type', 'points', 'games', 'avgPoints'];
+    for (const field of requiredFields) {
+      if (!newManager[field] && newManager[field] !== 0) {
+        return new Response(JSON.stringify({ error: `Missing required field: ${field}` }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+    
+    // Validate field types and values
+    if (typeof newManager.division !== 'number' || newManager.division < 1 || newManager.division > 5) {
+      return new Response(JSON.stringify({ error: "Division must be a number between 1 and 5" }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { "Content-Type": "application/json" }
       });
     }
-
-    const store = getStore("managers");
+    
+    const validTypes = ['legend', 'elite', 'rising', 'veteran'];
+    if (!validTypes.includes(newManager.type)) {
+      return new Response(JSON.stringify({ error: `Type must be one of: ${validTypes.join(', ')}` }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    
+    if (typeof newManager.points !== 'number' || newManager.points < 0) {
+      return new Response(JSON.stringify({ error: "Points must be a non-negative number" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    
+    if (typeof newManager.games !== 'number' || newManager.games < 0) {
+      return new Response(JSON.stringify({ error: "Games must be a non-negative number" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    
+    if (typeof newManager.avgPoints !== 'number' || newManager.avgPoints < 0) {
+      return new Response(JSON.stringify({ error: "Average points must be a non-negative number" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
     
     // Get existing managers
-    const existingData = await store.get("all-managers", { type: "json" }) || { 
-      managers: [], 
-      metadata: {} 
-    };
+    let managersData = [];
+    try {
+      const data = await blobs.get("managers");
+      if (data) {
+        const text = await data.text();
+        managersData = JSON.parse(text);
+      }
+    } catch (error) {
+      console.log("No existing managers data found");
+    }
     
-    // Add timestamps
-    const timestamp = new Date().toISOString();
-    const managerWithTimestamp = {
-      ...managerData,
-      createdAt: timestamp,
-      updatedAt: timestamp
-    };
-
-    // Check if manager already exists
-    const existingIndex = existingData.managers.findIndex(m => m.id === managerData.id);
+    // Check if manager ID already exists
+    const existingIndex = managersData.findIndex(m => m.id === newManager.id);
     
     if (existingIndex >= 0) {
       // Update existing manager
-      existingData.managers[existingIndex] = {
-        ...existingData.managers[existingIndex],
-        ...managerWithTimestamp,
-        createdAt: existingData.managers[existingIndex].createdAt // Keep original creation date
-      };
+      managersData[existingIndex] = { ...managersData[existingIndex], ...newManager };
     } else {
       // Add new manager
-      existingData.managers.push(managerWithTimestamp);
+      managersData.push(newManager);
     }
-
-    // Update metadata
-    existingData.metadata = {
-      totalManagers: existingData.managers.length,
-      seasonsCompleted: 25,
-      lastUpdated: timestamp
-    };
-
-    // Save back to blob storage
-    await store.set("all-managers", JSON.stringify(existingData));
-
-    return new Response(JSON.stringify({
-      success: true,
-      manager: managerWithTimestamp,
-      message: existingIndex >= 0 ? 'Manager updated successfully' : 'Manager added successfully'
+    
+    // Save updated data
+    await blobs.set("managers", JSON.stringify(managersData));
+    
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: existingIndex >= 0 ? "Manager updated successfully" : "Manager added successfully",
+      manager: newManager
     }), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
+      status: 200,
+      headers: { "Content-Type": "application/json" }
     });
     
   } catch (error) {
-    console.error('Add manager error:', error);
-    return new Response(JSON.stringify({ 
-      error: 'Failed to add/update manager',
-      details: error.message 
-    }), {
+    console.error("Error in add-manager API:", error);
+    return new Response(JSON.stringify({ error: "Failed to add/update manager" }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { "Content-Type": "application/json" }
     });
   }
 };
 
-export const config: Config = {
+export const config = {
   path: "/api/add-manager"
 };
