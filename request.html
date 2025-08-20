@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Your Profile - Top 100 Manager Profiles</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #134e5e 0%, #71b280 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2d5a3d 0%, #3d7049 100%);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        
+        .nav-links a {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .nav-links a:hover {
+            color: white;
+        }
+        
+        .nav-title {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .form-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 3rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .form-header h1 {
+            color: #2d5a3d;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-header p {
+            color: #666;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #2d5a3d;
+        }
+        
+        .required {
+            color: #e74c3c;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #71b280;
+            box-shadow: 0 0 0 3px rgba(113, 178, 128, 0.1);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+        
+        .form-help {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+        
+        .submit-btn {
+            background: linear-gradient(135deg, #2d5a3d 0%, #71b280 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(45, 90, 61, 0.3);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        .info-box {
+            background: linear-gradient(135deg, rgba(113, 178, 128, 0.1) 0%, rgba(45, 90, 61, 0.1) 100%);
+            border: 1px solid rgba(113, 178, 128, 0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .info-box h3 {
+            color: #2d5a3d;
+            margin-bottom: 0.5rem;
+        }
+        
+        .info-box ul {
+            color: #666;
+            padding-left: 1.5rem;
+        }
+        
+        .info-box li {
+            margin-bottom: 0.25rem;
+        }
+        
+        @media (max-width: 768px) {
+            .nav-content {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .container {
+                padding: 0 0.5rem;
+            }
+            
+            .form-card {
+                padding: 2rem 1.5rem;
+            }
+            
+            .form-header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="nav-content">
+            <div class="nav-links">
+                <a href="/">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    Back to Managers
+                </a>
+                <span style="color: rgba(255,255,255,0.5)">|</span>
+                <a href="https://smtop100.blog">Main Site</a>
+                <a href="https://legends.smtop100.blog">Legends</a>
+            </div>
+            <div class="nav-title">Profile Request</div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="form-card">
+            <div class="form-header">
+                <h1>🏆 Request Your Profile</h1>
+                <p>Join the Top 100 Manager Profiles and share your Soccer Manager Worlds journey with the community!</p>
+            </div>
+            
+            <div class="info-box">
+                <h3>What to expect:</h3>
+                <ul>
+                    <li>We'll review your submission and contact you within 48 hours</li>
+                    <li>Your profile will showcase your achievements and story</li>
+                    <li>All information is voluntary - share what you're comfortable with</li>
+                    <li>Profiles celebrate the diversity and passion of our community</li>
+                </ul>
+            </div>
+            
+            <div class="success-message" id="success-message">
+                ✅ Your profile request has been submitted successfully! We'll be in touch soon.
+            </div>
+            
+            <div class="error-message" id="error-message">
+                ❌ There was an error submitting your request. Please try again.
+            </div>
+            
+            <form id="profile-form">
+                <div class="form-group">
+                    <label for="manager-name">Manager Name <span class="required">*</span></label>
+                    <input type="text" id="manager-name" name="managerName" required>
+                    <div class="form-help">Your name as you'd like it displayed on your profile</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="club-name">Club Name <span class="required">*</span></label>
+                    <input type="text" id="club-name" name="clubName" required>
+                    <div class="form-help">The club you currently manage in Soccer Manager Worlds</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="division">Current Division</label>
+                    <select id="division" name="division">
+                        <option value="">Select your division (optional)</option>
+                        <option value="1">Division 1</option>
+                        <option value="2">Division 2</option>
+                        <option value="3">Division 3</option>
+                        <option value="4">Division 4</option>
+                        <option value="5">Division 5</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="contact-info">Contact Information <span class="required">*</span></label>
+                    <input type="text" id="contact-info" name="contactInfo" required>
+                    <div class="form-help">Email, Discord username, or preferred contact method</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="achievements">Key Achievements</label>
+                    <textarea id="achievements" name="achievements" placeholder="Share your notable achievements in Soccer Manager Worlds - titles, cups, records, memorable seasons..."></textarea>
+                    <div class="form-help">Optional: Your proudest moments and accomplishments</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="story">Your Top 100 Story</label>
+                    <textarea id="story" name="story" placeholder="Tell us about your journey in Soccer Manager Worlds and the Top 100 community. How did you start? What keeps you motivated? Any memorable moments or relationships formed?"></textarea>
+                    <div class="form-help">Optional: Share what makes your journey special</div>
+                </div>
+                
+                <button type="submit" class="submit-btn" id="submit-btn">
+                    Submit Profile Request
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('profile-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submit-btn');
+            const successMsg = document.getElementById('success-message');
+            const errorMsg = document.getElementById('error-message');
+            
+            // Hide previous messages
+            successMsg.style.display = 'none';
+            errorMsg.style.display = 'none';
+            
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+            
+            try {
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData.entries());
+                
+                const response = await fetch('/api/profile-request', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    successMsg.style.display = 'block';
+                    e.target.reset();
+                    // Scroll to top to show success message
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    throw new Error(result.error || 'Submission failed');
+                }
+                
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                errorMsg.style.display = 'block';
+                errorMsg.textContent = `❌ ${error.message}`;
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Profile Request';
+            }
+        });
+    </script>
+</body>
+</html>
