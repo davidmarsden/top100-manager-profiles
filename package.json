@@ -1,10 +1,12 @@
+```json
 {
   "name": "top100-manager-profiles",
   "version": "1.0.0",
   "description": "Interactive Manager Profiles for Top 100 Soccer Manager Community",
+  "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview",
     "netlify:dev": "netlify dev"
   },
@@ -14,12 +16,15 @@
     "lucide-react": "^0.263.1"
   },
   "devDependencies": {
-    "@netlify/functions": "^2.0.0",
+    "@netlify/functions": "^2.4.0",
+    "@types/node": "^20.8.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "@vitejs/plugin-react": "^4.0.0",
+    "@vitejs/plugin-react": "^4.1.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.31",
     "tailwindcss": "^3.3.0",
-    "typescript": "^5.0.0",
-    "vite": "^4.4.0"
+    "typescript": "^5.2.0",
+    "vite": "^4.5.0"
   }
 }
