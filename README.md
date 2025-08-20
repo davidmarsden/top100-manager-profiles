@@ -1,8 +1,6 @@
-# top100-manager-profiles
-Interactive Manager Profiles for Top 100 Soccer Manager Community
 # Top 100 Manager Profiles
 
-Interactive web application celebrating 25 seasons of Top 100 Soccer Manager community.
+Interactive web application celebrating 10 years and 25 seasons of Top 100 Soccer Manager community.
 
 ## 🚀 Features
 
