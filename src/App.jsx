@@ -387,7 +387,7 @@ const App = () => {
             lineHeight: '1.6',
             color: '#fff'
           }}>
-            Celebrating 10 years and 25 seasons of Soccer Manager Worlds excellence. Discover the stories, achievements, 
+            Celebrating 25 seasons of Soccer Manager Worlds excellence. Discover the stories, achievements, 
             and legendary journeys of our Top 100 community's finest managers.
           </p>
         </div>
