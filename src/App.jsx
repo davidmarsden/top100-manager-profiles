@@ -137,9 +137,9 @@ const App = () => {
       }}>
         {/* Navigation Header */}
         <div style={{
-          background: 'linear-gradient(to right, #CD853F, #8B4513)',
-          borderBottom: '2px solid #DEB887',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+          background: 'linear-gradient(to right, #ff9a9e, #fecfef)',
+          borderBottom: '2px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
         }}>
           <div style={{
             maxWidth: '1200px',
@@ -156,7 +156,7 @@ const App = () => {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#F5DEB3',
+                  color: '#fff',
                   cursor: 'pointer',
                   fontSize: '1rem',
                   fontWeight: '500',
@@ -167,15 +167,15 @@ const App = () => {
               >
                 ← Back to Managers
               </button>
-              <span style={{ color: '#DEB887' }}>|</span>
+              <span style={{ color: 'rgba(255, 255, 255, 0.7)' }}>|</span>
               <a 
                 href="https://smtop100.blog" 
-                style={{ color: '#F5DEB3', textDecoration: 'none', fontWeight: '500' }}
+                style={{ color: '#fff', textDecoration: 'none', fontWeight: '500' }}
               >
                 Main Site
               </a>
             </div>
-            <div style={{ color: '#f3f4f6', fontWeight: 'bold', fontSize: '1.2rem' }}>
+            <div style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.2rem' }}>
               Manager Profile
             </div>
           </div>
@@ -286,7 +286,7 @@ const App = () => {
                 <p style={{
                   fontSize: '1.1rem',
                   fontStyle: 'italic',
-                  borderLeft: '4px solid #CD853F',
+                  borderLeft: '4px solid #ff9a9e',
                   paddingLeft: '1rem',
                   color: '#4b5563'
                 }}>
@@ -323,14 +323,14 @@ const App = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #8B4513 0%, #CD853F 50%, #8B4513 100%)',
-      color: '#f3f4f6'
+      background: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%)',
+      color: '#333'
     }}>
       {/* Navigation Header */}
       <div style={{
-        background: 'linear-gradient(to right, #CD853F, #8B4513)',
-        borderBottom: '2px solid #DEB887',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+        background: 'linear-gradient(to right, #ff9a9e, #fecfef)',
+        borderBottom: '2px solid rgba(255, 255, 255, 0.3)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
       }}>
         <div style={{
           maxWidth: '1200px',
@@ -345,7 +345,7 @@ const App = () => {
             <a 
               href="https://smtop100.blog" 
               style={{ 
-                color: '#F5DEB3', 
+                color: '#fff', 
                 textDecoration: 'none', 
                 fontWeight: '500',
                 display: 'flex',
@@ -355,15 +355,15 @@ const App = () => {
             >
               ← Back to Main Site
             </a>
-            <span style={{ color: '#DEB887' }}>|</span>
+            <span style={{ color: 'rgba(255, 255, 255, 0.7)' }}>|</span>
             <a 
               href="https://legends.smtop100.blog" 
-              style={{ color: '#F5DEB3', textDecoration: 'none', fontWeight: '500' }}
+              style={{ color: '#fff', textDecoration: 'none', fontWeight: '500' }}
             >
               Legends
             </a>
           </div>
-          <div style={{ color: '#f3f4f6', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                      <div style={{ color: '#fff', fontWeight: 'bold', fontSize: '1.2rem' }}>
             Manager Profiles
           </div>
         </div>
@@ -385,9 +385,9 @@ const App = () => {
             maxWidth: '600px',
             margin: '0 auto',
             lineHeight: '1.6',
-            color: '#F5DEB3'
+            color: '#fff'
           }}>
-            Celebrating 10 ten years and 25 seasons of Soccer Manager Worlds excellence. Discover the stories, achievements, 
+            Celebrating 25 seasons of Soccer Manager Worlds excellence. Discover the stories, achievements, 
             and legendary journeys of our Top 100 community's finest managers.
           </p>
         </div>
@@ -501,7 +501,7 @@ const App = () => {
 
         {/* Results Summary */}
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <p style={{ fontSize: '1.1rem', color: '#F5DEB3' }}>
+          <p style={{ fontSize: '1.1rem', color: '#fff' }}>
             Showing {filteredManagers.length} of {managers.length} managers
           </p>
         </div>
@@ -509,7 +509,7 @@ const App = () => {
         {/* Manager Grid */}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '3rem' }}>
-            <div style={{ fontSize: '1.2rem', color: '#f9fafb' }}>Loading managers...</div>
+            <div style={{ fontSize: '1.2rem', color: '#fff' }}>Loading managers...</div>
           </div>
         ) : (
           <div style={{
@@ -569,14 +569,14 @@ const App = () => {
                   </div>
                 </div>
 
-                 <div style={{
+                <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, 1fr)',
                   gap: '1rem',
                   marginBottom: '1rem'
                 }}>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#CD853F' }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#ff9a9e' }}>
                       {formatPoints(manager.points)}
                     </div>
                     <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Points</div>
@@ -611,7 +611,7 @@ const App = () => {
                 )}
 
                 <div style={{ textAlign: 'center' }}>
-                  <span style={{ color: '#CD853F', fontWeight: '500' }}>
+                  <span style={{ color: '#ff9a9e', fontWeight: '500' }}>
                     View Profile →
                   </span>
                 </div>
@@ -622,20 +622,20 @@ const App = () => {
 
         {filteredManagers.length === 0 && !loading && (
           <div style={{ textAlign: 'center', padding: '3rem' }}>
-            <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: '#f9fafb' }}>
+            <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: '#fff' }}>
               No managers found
             </div>
-            <p style={{ color: '#d1fae5' }}>Try adjusting your search criteria</p>
+            <p style={{ color: '#fff' }}>Try adjusting your search criteria</p>
           </div>
         )}
 
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: '4rem', paddingBottom: '2rem' }}>
-          <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: '#F5DEB3' }}>
+          <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: '#fff' }}>
             ⚽ Celebrating 25 Seasons of Soccer Manager Worlds Excellence ⚽
           </p>
-          <p style={{ color: '#DEB887' }}>
-            Part of the Top 100 Community • Est. 2015
+          <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+            Part of the Top 100 Community • Est. 2000
           </p>
         </div>
       </div>
