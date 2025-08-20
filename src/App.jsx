@@ -387,7 +387,7 @@ const App = () => {
             lineHeight: '1.6',
             color: '#F5DEB3'
           }}>
-            Celebrating 25 seasons of Soccer Manager Worlds excellence. Discover the stories, achievements, 
+            Celebrating 10 ten years and 25 seasons of Soccer Manager Worlds excellence. Discover the stories, achievements, 
             and legendary journeys of our Top 100 community's finest managers.
           </p>
         </div>
@@ -635,7 +635,7 @@ const App = () => {
             ⚽ Celebrating 25 Seasons of Soccer Manager Worlds Excellence ⚽
           </p>
           <p style={{ color: '#DEB887' }}>
-            Part of the Top 100 Community • Est. 2000
+            Part of the Top 100 Community • Est. 2015
           </p>
         </div>
       </div>
