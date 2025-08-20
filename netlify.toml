@@ -1,13 +1,26 @@
 [build]
   command = "npm run build"
-  functions = "netlify/functions"
   publish = "dist"
+  functions = "netlify/functions"
 
+# Redirect API calls to functions
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Serve static pages before SPA fallback
+[[redirects]]
+  from = "/request"
+  to = "/request.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin"
+  to = "/admin/index.html"
+  status = 200
+
+# SPA fallback (must be last)
 [[redirects]]
   from = "/*"
   to = "/index.html"
