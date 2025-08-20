@@ -1,0 +1,29 @@
+[build]
+  command = "npm run build"
+  functions = "netlify/functions"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[[redirects]]
+  from = "/manager/*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[functions]
+  directory = "netlify/functions"
+
+# Scheduled function for daily stats updates
+[functions."stats-background"]
+  schedule = "@daily"
+
+# Environment variables (set in Netlify UI)
+# SOCCER_MANAGER_API_KEY = "your_api_key"
+# DATABASE_URL = "your_database_connection"
+# DISCORD_WEBHOOK_URL = "for_notifications"
