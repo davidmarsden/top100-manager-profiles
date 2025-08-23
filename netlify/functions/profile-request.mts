@@ -19,26 +19,50 @@ async function submitProfile(req: Request) {
   try {
     const body = await req.json();
 
-    for (const f of ["Manager Name","Club Name"]) {
-      if (!body[f]) return json(400, { error: `Missing required field: ${f}` });
-    }
+    // helper to read first-present key
+    const get = (...keys: string[]) => {
+      for (const k of keys) {
+        const v = (body as any)[k];
+        if (v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
+      }
+      return "";
+    };
+
+    // accept either Sheet header names or camelCase field names from the FE
+    const managerName = get("Manager Name", "managerName", "name");
+    const clubName    = get("Club Name", "clubName", "club");
+    if (!managerName) return json(400, { error: "Missing required field: Manager Name" });
+    if (!clubName)    return json(400, { error: "Missing required field: Club Name" });
+
+    const division            = get("Division", "division");
+    const careerHighlights    = get("Career Highlights", "careerHighlights");
+    const favouriteFormation  = get("Favourite Formation", "favouriteFormation");
+    const tacticalPhilosophy  = get("Tactical Philosophy", "tacticalPhilosophy");
+    const mostMemorableMoment = get("Most Memorable Moment", "memorableMoment");
+    const mostFearedOpponent  = get("Most Feared Opponent", "fearedOpponent");
+    const futureAmbitions     = get("Future Ambitions", "futureAmbitions");
+    const story               = get("Story", "story");
+    const yourTop100Story     = get("Your Top 100 Story", "yourTop100Story"); // old UI field
 
     const timestamp = new Date().toISOString();
     const requestId = `sub_${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
 
+    // If the old "Your Top 100 Story" is present, append it to Story
+    const combinedStory = [story, yourTop100Story].filter(Boolean).join("\n\n");
+
     const record: Record<string, any> = {
       "Timestamp": timestamp,
       "Request ID": requestId,
-      "Manager Name": body["Manager Name"],
-      "Club Name": body["Club Name"],
-      "Division": body["Division"] ?? "",
-      "Career Highlights": body["Career Highlights"] ?? "",
-      "Favourite Formation": body["Favourite Formation"] ?? "",
-      "Tactical Philosophy": body["Tactical Philosophy"] ?? "",
-      "Most Memorable Moment": body["Most Memorable Moment"] ?? "",
-      "Most Feared Opponent": body["Most Feared Opponent"] ?? "",
-      "Future Ambitions": body["Future Ambitions"] ?? "",
-      "Story": body["Story"] ?? "",
+      "Manager Name": managerName,
+      "Club Name": clubName,
+      "Division": division,
+      "Career Highlights": careerHighlights,
+      "Favourite Formation": favouriteFormation,
+      "Tactical Philosophy": tacticalPhilosophy,
+      "Most Memorable Moment": mostMemorableMoment,
+      "Most Feared Opponent": mostFearedOpponent,
+      "Future Ambitions": futureAmbitions,
+      "Story": combinedStory,
       "Status": "pending",
     };
 
