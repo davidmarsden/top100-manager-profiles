@@ -1,6 +1,6 @@
 import type { Context } from "@netlify/functions";
 
-// In-memory storage for this session (will reset on function restart)
+// In-memory storage as backup
 let profileRequests: any[] = [];
 
 export default async (req: Request, context: Context) => {
@@ -32,6 +32,52 @@ export default async (req: Request, context: Context) => {
     });
   }
 };
+
+async function saveToGoogleSheets(profileRequest: any) {
+  try {
+    // Get the Google Sheets webhook URL from environment variables
+    const SHEETS_WEBHOOK_URL = Netlify.env.get("GOOGLE_SHEETS_WEBHOOK_URL");
+    
+    if (!SHEETS_WEBHOOK_URL) {
+      console.log('No Google Sheets webhook URL configured, skipping sheets save');
+      return false;
+    }
+    
+    console.log('Attempting to save to Google Sheets...');
+    
+    // Prepare data for Google Sheets
+    const sheetData = {
+      timestamp: profileRequest.timestamp,
+      id: profileRequest.id,
+      managerName: profileRequest.managerName,
+      clubName: profileRequest.clubName,
+      division: profileRequest.division || '',
+      contactInfo: profileRequest.contactInfo,
+      achievements: profileRequest.achievements || '',
+      story: profileRequest.story || '',
+      status: profileRequest.status
+    };
+    
+    const response = await fetch(SHEETS_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(sheetData)
+    });
+    
+    if (response.ok) {
+      console.log('Successfully saved to Google Sheets');
+      return true;
+    } else {
+      console.log('Failed to save to Google Sheets:', response.status, response.statusText);
+      return false;
+    }
+  } catch (error) {
+    console.error('Error saving to Google Sheets:', error);
+    return false;
+  }
+}
 
 async function handleProfileRequest(req: Request, context: Context) {
   try {
@@ -69,11 +115,14 @@ async function handleProfileRequest(req: Request, context: Context) {
     
     console.log('Created profile request:', profileRequest);
     
-    // Store in memory (simple solution)
+    // Store in memory (immediate availability for admin dashboard)
     profileRequests.push(profileRequest);
-    console.log('Request stored. Total requests in memory:', profileRequests.length);
+    console.log('Request stored in memory. Total requests:', profileRequests.length);
     
-    // Also log detailed request for manual collection
+    // Try to save to Google Sheets for persistence
+    const savedToSheets = await saveToGoogleSheets(profileRequest);
+    
+    // Detailed logging for manual collection
     console.log('=== PROFILE REQUEST FOR MANUAL COLLECTION ===');
     console.log('Manager:', profileRequest.managerName);
     console.log('Club:', profileRequest.clubName);
@@ -83,13 +132,21 @@ async function handleProfileRequest(req: Request, context: Context) {
     console.log('Story:', profileRequest.story || 'None provided');
     console.log('Submitted:', profileRequest.timestamp);
     console.log('Request ID:', profileRequest.id);
+    console.log('Saved to Google Sheets:', savedToSheets);
     console.log('=== END PROFILE REQUEST ===');
+    
+    let message = "Profile request submitted successfully";
+    if (savedToSheets) {
+      message += " and saved to Google Sheets";
+    } else {
+      message += " (stored temporarily - check function logs)";
+    }
     
     return new Response(JSON.stringify({ 
       success: true, 
-      message: "Profile request submitted successfully",
+      message: message,
       requestId: profileRequest.id,
-      note: "Request stored temporarily and logged for manual collection"
+      savedToSheets: savedToSheets
     }), {
       status: 200,
       headers: { 
