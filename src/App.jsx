@@ -55,7 +55,7 @@ const App = () => {
         {
           id: "glen-mullan",
           name: "Glen Mullan",
-          club: "Espanyol",
+          club: "Real Madrid",
           division: 1,
           type: "elite",
           points: 2243,
@@ -67,7 +67,7 @@ const App = () => {
         {
           id: "david-marsden",
           name: "David Marsden",
-          club: "Hamburger SV",
+          club: "Liverpool FC",
           division: 2,
           type: "veteran",
           points: 1876,
