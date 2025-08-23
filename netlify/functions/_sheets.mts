@@ -1,11 +1,10 @@
-// netlify/functions/_sheets.mts
 import { google } from 'googleapis';
 
 export const SHEET_ID = Netlify.env.get("GOOGLE_SHEET_ID");
 export const TAB_SUBMISSIONS = "Submissions";
 export const TAB_MANAGERS = "Managers";
 
-// EXACT header text from your Submissions tab:
+// EXACT header order for Submissions:
 export const SUBMISSION_COLUMNS = [
   "Timestamp",
   "Request ID",
@@ -13,17 +12,15 @@ export const SUBMISSION_COLUMNS = [
   "Club Name",
   "Division",
   "Career Highlights",
-  "Favourite Formation ",
-  "Tactical Philosophy ",
+  "Favourite Formation",
+  "Tactical Philosophy",
   "Most Memorable Moment",
-  "Most Feared Opponent ",
-  "Future Ambitions ",
-  "Your Top 100 Story",
+  "Most Feared Opponent",
+  "Future Ambitions",
   "Story",
   "Status",
 ];
 
-// Managers tab headers:
 export const MANAGER_COLUMNS = [
   "id","name","club","division","signature","story"
 ];
