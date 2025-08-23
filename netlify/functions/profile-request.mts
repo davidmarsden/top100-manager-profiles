@@ -19,36 +19,39 @@ async function submitProfile(req: Request) {
   try {
     const body = await req.json();
 
-    // helper to read first-present key
+    // helper: pick first non-empty value across many possible keys
     const get = (...keys: string[]) => {
       for (const k of keys) {
-        const v = (body as any)[k];
-        if (v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
+        if (k in body) {
+          const v = (body as any)[k];
+          if (v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
+        }
       }
       return "";
     };
 
-    // accept either Sheet header names or camelCase field names from the FE
+    // Required
     const managerName = get("Manager Name", "managerName", "name");
     const clubName    = get("Club Name", "clubName", "club");
     if (!managerName) return json(400, { error: "Missing required field: Manager Name" });
     if (!clubName)    return json(400, { error: "Missing required field: Club Name" });
 
-    const division            = get("Division", "division");
-    const careerHighlights    = get("Career Highlights", "careerHighlights");
-    const favouriteFormation  = get("Favourite Formation", "favouriteFormation");
-    const tacticalPhilosophy  = get("Tactical Philosophy", "tacticalPhilosophy");
-    const mostMemorableMoment = get("Most Memorable Moment", "memorableMoment");
-    const mostFearedOpponent  = get("Most Feared Opponent", "fearedOpponent");
-    const futureAmbitions     = get("Future Ambitions", "futureAmbitions");
-    const story               = get("Story", "story");
-    const yourTop100Story     = get("Your Top 100 Story", "yourTop100Story"); // old UI field
+    // Optional (accept legacy + camelCase + US/UK spellings)
+    const division            = get("Division", "division", "div");
+    const careerHighlights    = get("Career Highlights", "careerHighlights", "achievements", "highlights");
+    const favouriteFormation  = get("Favourite Formation", "favoriteFormation", "favourite", "favorite", "formation", "favFormation");
+    const tacticalPhilosophy  = get("Tactical Philosophy", "tacticalPhilosophy", "tactics", "philosophy");
+    const mostMemorableMoment = get("Most Memorable Moment", "mostMemorableMoment", "memorableMoment");
+    const mostFearedOpponent  = get("Most Feared Opponent", "mostFearedOpponent", "fearedOpponent");
+    const futureAmbitions     = get("Future Ambitions", "futureAmbitions", "ambitions", "goals");
+
+    // Story can come from either/both fields; merge them
+    const storyPrimary   = get("Story", "story");
+    const storyExtra     = get("Your Top 100 Story", "yourTop100Story");
+    const combinedStory  = [storyPrimary, storyExtra].filter(Boolean).join("\n\n");
 
     const timestamp = new Date().toISOString();
     const requestId = `sub_${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
-
-    // If the old "Your Top 100 Story" is present, append it to Story
-    const combinedStory = [story, yourTop100Story].filter(Boolean).join("\n\n");
 
     const record: Record<string, any> = {
       "Timestamp": timestamp,
