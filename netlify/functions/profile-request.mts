@@ -1,5 +1,8 @@
 import type { Context } from "@netlify/functions";
 
+// In-memory storage for this session (will reset on function restart)
+let profileRequests: any[] = [];
+
 export default async (req: Request, context: Context) => {
   console.log('Profile Request API called with method:', req.method);
   
@@ -66,71 +69,27 @@ async function handleProfileRequest(req: Request, context: Context) {
     
     console.log('Created profile request:', profileRequest);
     
-    // Check if blobs is available
-    const { blobs } = context;
-    console.log('Blobs available:', !!blobs);
+    // Store in memory (simple solution)
+    profileRequests.push(profileRequest);
+    console.log('Request stored. Total requests in memory:', profileRequests.length);
     
-    if (!blobs) {
-      console.log('Netlify Blobs not available - using in-memory storage for this request');
-      // For now, just return success since we can't store it
-      // In production, you might want to send an email or use another storage method
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: "Profile request received successfully (stored temporarily)",
-        requestId: profileRequest.id,
-        note: "Request logged to console - please check Netlify function logs"
-      }), {
-        status: 200,
-        headers: { 
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*"
-        }
-      });
-    }
-    
-    // Get existing requests
-    let requestsData = [];
-    try {
-      console.log('Getting existing requests...');
-      const data = await blobs.get("profile-requests");
-      if (data) {
-        const text = await data.text();
-        requestsData = JSON.parse(text);
-        console.log('Found existing requests:', requestsData.length);
-      }
-    } catch (error) {
-      console.log("No existing profile requests found, starting fresh");
-    }
-    
-    // Add new request
-    requestsData.push(profileRequest);
-    
-    try {
-      // Save updated data
-      console.log('Saving updated requests data...');
-      await blobs.set("profile-requests", JSON.stringify(requestsData));
-      console.log('Request data saved successfully');
-    } catch (saveError) {
-      console.error('Error saving request to blobs:', saveError);
-      // Still return success since we have the data in logs
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: "Profile request received successfully (temporary storage)",
-        requestId: profileRequest.id,
-        warning: "Could not save to permanent storage - request logged to console"
-      }), {
-        status: 200,
-        headers: { 
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*"
-        }
-      });
-    }
+    // Also log detailed request for manual collection
+    console.log('=== PROFILE REQUEST FOR MANUAL COLLECTION ===');
+    console.log('Manager:', profileRequest.managerName);
+    console.log('Club:', profileRequest.clubName);
+    console.log('Division:', profileRequest.division || 'Not specified');
+    console.log('Contact:', profileRequest.contactInfo);
+    console.log('Achievements:', profileRequest.achievements || 'None provided');
+    console.log('Story:', profileRequest.story || 'None provided');
+    console.log('Submitted:', profileRequest.timestamp);
+    console.log('Request ID:', profileRequest.id);
+    console.log('=== END PROFILE REQUEST ===');
     
     return new Response(JSON.stringify({ 
       success: true, 
       message: "Profile request submitted successfully",
-      requestId: profileRequest.id
+      requestId: profileRequest.id,
+      note: "Request stored temporarily and logged for manual collection"
     }), {
       status: 200,
       headers: { 
@@ -157,36 +116,14 @@ async function handleProfileRequest(req: Request, context: Context) {
 async function getProfileRequests(req: Request, context: Context) {
   try {
     console.log('Getting profile requests...');
-    const { blobs } = context;
-    
-    if (!blobs) {
-      console.log('Netlify Blobs not available - returning empty array');
-      return new Response(JSON.stringify([]), {
-        status: 200,
-        headers: { 
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*"
-        }
-      });
-    }
-    
-    // Get profile requests data
-    let requestsData = [];
-    try {
-      const data = await blobs.get("profile-requests");
-      if (data) {
-        const text = await data.text();
-        requestsData = JSON.parse(text);
-        console.log('Retrieved requests:', requestsData.length);
-      }
-    } catch (error) {
-      console.log("No profile requests found");
-    }
+    console.log('Current requests in memory:', profileRequests.length);
     
     // Sort by timestamp (newest first)
-    requestsData.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const sortedRequests = [...profileRequests].sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
     
-    return new Response(JSON.stringify(requestsData), {
+    return new Response(JSON.stringify(sortedRequests), {
       status: 200,
       headers: { 
         "Content-Type": "application/json",
