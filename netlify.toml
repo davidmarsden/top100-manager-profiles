@@ -1,7 +1,10 @@
 [build]
   command = "npm run build"
-  publish = "dist"  # Changed from "build" to "dist"
+  publish = "dist"
   functions = "netlify/functions"
+
+[functions]
+  external_node_modules = ["@netlify/blobs"]
 
 # API routes
 [[redirects]]
