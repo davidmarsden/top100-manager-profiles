@@ -16,10 +16,11 @@ export default async (req: Request, _context: Context) => {
     if (rows.length <= 1) return json(200, []);
     const header = rows[0];
     const items = rows.slice(1).map(r => mapRow(header, r));
+
     return json(200, items);
   } catch (e: any) {
     console.error("managers error", e);
-    return json(200, []); // keep UI alive
+    return json(200, []); // keep UI rendering
   }
 };
 
