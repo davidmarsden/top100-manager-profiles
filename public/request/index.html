@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Request Your Profile - Top 100 Manager Profiles</title>
+    <title>Submit Your Profile - Top 100 Manager Profiles</title>
     <style>
         * {
             margin: 0;
@@ -93,6 +93,12 @@
 
         .form-group {
             margin-bottom: 1.5rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
         }
 
         .form-group label {
@@ -200,6 +206,20 @@
             margin-bottom: 0.25rem;
         }
 
+        .published-notice {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(21, 128, 61, 0.1) 100%);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: none;
+        }
+
+        .published-notice h3 {
+            color: #22c55e;
+            margin-bottom: 0.5rem;
+        }
+
         @media (max-width: 768px) {
             .nav-content {
                 padding: 1rem;
@@ -223,6 +243,10 @@
             .form-header h1 {
                 font-size: 2rem;
             }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -240,33 +264,38 @@
                 <a href="https://smtop100.blog">Main Site</a>
                 <a href="https://legends.smtop100.blog">Legends</a>
             </div>
-            <div class="nav-title">Profile Request</div>
+            <div class="nav-title">Submit Profile</div>
         </div>
     </div>
 
     <div class="container">
         <div class="form-card">
             <div class="form-header">
-                <h1>🏆 Request Your Profile</h1>
-                <p>Join the Top 100 Manager Profiles and share your Soccer Manager Worlds and Top 100 journey with the community!</p>
+                <h1>Submit Your Manager Profile</h1>
+                <p>Submit your profile to be featured on the Top 100 Manager Profiles. Your profile will be published automatically and visible immediately on the site!</p>
             </div>
 
             <div class="info-box">
-                <h3>What to expect:</h3>
+                <h3>How it works:</h3>
                 <ul>
-                    <li>We'll review your submission and contact you within 48 hours</li>
-                    <li>Your profile will showcase your achievements and story</li>
-                    <li>All information is voluntary - share what you're comfortable with</li>
-                    <li>Profiles celebrate the diversity and passion of our community</li>
+                    <li>Your profile will be published automatically and appear on the site immediately</li>
+                    <li>All submissions are logged and can be reviewed if needed</li>
+                    <li>Share your achievements, story, and journey with the Top 100 community</li>
+                    <li>All fields except name and club are optional - share what you're comfortable with</li>
                 </ul>
             </div>
 
+            <div class="published-notice" id="published-notice">
+                <h3>Profile Published Successfully!</h3>
+                <p>Your manager profile is now live on the site. You can view it on the main managers page.</p>
+            </div>
+
             <div class="success-message" id="success-message">
-                ✅ Your profile request has been submitted successfully! We'll be in touch soon.
+                Profile submitted successfully!
             </div>
 
             <div class="error-message" id="error-message">
-                ❌ There was an error submitting your request. Please try again.
+                There was an error submitting your profile. Please try again.
             </div>
 
             <form id="profile-form">
@@ -282,22 +311,30 @@
                     <div class="form-help">The club you currently manage in Top 100</div>
                 </div>
 
-                <div class="form-group">
-                    <label for="division">Current Division</label>
-                    <select id="division" name="division">
-                        <option value="">Select your division (optional)</option>
-                        <option value="1">Division 1</option>
-                        <option value="2">Division 2</option>
-                        <option value="3">Division 3</option>
-                        <option value="4">Division 4</option>
-                        <option value="5">Division 5</option>
-                    </select>
-                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="division">Division</label>
+                        <select id="division" name="division">
+                            <option value="">Select division (optional)</option>
+                            <option value="1">Division 1</option>
+                            <option value="2">Division 2</option>
+                            <option value="3">Division 3</option>
+                            <option value="4">Division 4</option>
+                            <option value="5">Division 5</option>
+                        </select>
+                    </div>
 
-                <div class="form-group">
-                    <label for="contact-info">Contact Information <span class="required">*</span></label>
-                    <input type="text" id="contact-info" name="contactInfo" required>
-                    <div class="form-help">Email, Discord username, or preferred contact method</div>
+                    <div class="form-group">
+                        <label for="points">Total Points</label>
+                        <input type="number" id="points" name="points" placeholder="e.g. 1500">
+                        <div class="form-help">Your current total points</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="games">Games Played</label>
+                        <input type="number" id="games" name="games" placeholder="e.g. 600">
+                        <div class="form-help">Total games played</div>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -313,7 +350,7 @@
                 </div>
 
                 <button type="submit" class="submit-btn" id="submit-btn">
-                    Submit Profile Request
+                    Submit Profile
                 </button>
             </form>
         </div>
@@ -326,10 +363,12 @@
             const submitBtn = document.getElementById('submit-btn');
             const successMsg = document.getElementById('success-message');
             const errorMsg = document.getElementById('error-message');
+            const publishedNotice = document.getElementById('published-notice');
 
             // Hide previous messages
             successMsg.style.display = 'none';
             errorMsg.style.display = 'none';
+            publishedNotice.style.display = 'none';
 
             // Disable submit button
             submitBtn.disabled = true;
@@ -338,6 +377,11 @@
             try {
                 const formData = new FormData(e.target);
                 const data = Object.fromEntries(formData.entries());
+
+                // Calculate average points if both points and games are provided
+                if (data.points && data.games && parseFloat(data.games) > 0) {
+                    data.avgPoints = (parseFloat(data.points) / parseFloat(data.games)).toFixed(2);
+                }
 
                 const response = await fetch('/api/profile-request', {
                     method: 'POST',
@@ -350,7 +394,18 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    successMsg.style.display = 'block';
+                    if (result.published) {
+                        publishedNotice.style.display = 'block';
+                        publishedNotice.innerHTML = `
+                            <h3>Profile Published Successfully!</h3>
+                            <p><strong>${data.managerName}</strong> from <strong>${data.clubName}</strong> is now live on the site! 
+                            <a href="/" style="color: #22c55e; text-decoration: underline;">View all profiles</a></p>
+                        `;
+                    } else {
+                        successMsg.style.display = 'block';
+                        successMsg.textContent = result.message;
+                    }
+                    
                     e.target.reset();
                     // Scroll to top to show success message
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -361,11 +416,11 @@
             } catch (error) {
                 console.error('Error submitting form:', error);
                 errorMsg.style.display = 'block';
-                errorMsg.textContent = `❌ ${error.message}`;
+                errorMsg.textContent = `${error.message}`;
             } finally {
                 // Re-enable submit button
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit Profile Request';
+                submitBtn.textContent = 'Submit Profile';
             }
         });
     </script>
