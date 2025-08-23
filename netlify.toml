@@ -1,13 +1,30 @@
 [build]
-   command = "npm run build"
-   publish = "dist"
-   functions = "netlify/functions"
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
 
- [functions]
--  external_node_modules = ["@netlify/blobs"]
-+  # You can drop "@netlify/blobs" if you no longer use it.
-+  external_node_modules = ["googleapis"]
+[functions]
+  # If you still use Netlify Blobs, keep it here too: ["googleapis", "@netlify/blobs"]
+  external_node_modules = ["googleapis"]
 
-+[# Optional but recommended to avoid old Node runtimes]
-+[build.environment]
-+  NODE_VERSION = "20"
+# Optional but recommended to avoid old Node runtimes
+[build.environment]
+  NODE_VERSION = "20"
+
+# API routes
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# Static /admin (must come before SPA fallback)
+[[redirects]]
+  from = "/admin"
+  to = "/admin/index.html"
+  status = 200
+
+# SPA fallback (must be last)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
