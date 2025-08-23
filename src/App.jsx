@@ -55,7 +55,7 @@ const App = () => {
         {
           id: "glen-mullan",
           name: "Glen Mullan",
-          club: "Real Madrid",
+          club: "Espanyol",
           division: 1,
           type: "elite",
           points: 2243,
@@ -67,7 +67,7 @@ const App = () => {
         {
           id: "david-marsden",
           name: "David Marsden",
-          club: "Liverpool FC",
+          club: "Hamburger SV",
           division: 2,
           type: "veteran",
           points: 1876,
@@ -369,53 +369,29 @@ const App = () => {
         </div>
       </div>
 
-<div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1rem' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1rem' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
           <h1 style={{
             fontSize: 'clamp(2rem, 5vw, 3rem)',
             fontWeight: 'bold',
             marginBottom: '1rem',
-            color: '#fff'
+            color: '#f9fafb'
           }}>
             🏆 TOP 100 MANAGER PROFILES 🏆
           </h1>
           <p style={{
             fontSize: '1.2rem',
             maxWidth: '600px',
-            margin: '0 auto 1rem',
+            margin: '0 auto',
             lineHeight: '1.6',
             color: '#fff'
           }}>
-            Celebrating 10 years and 25 seasons of Top 100 excellence. Discover the stories, achievements, 
+            Celebrating 25 seasons of Soccer Manager Worlds excellence. Discover the stories, achievements, 
             and legendary journeys of our Top 100 community's finest managers.
           </p>
-          
-          {/* REQUEST YOUR PROFILE BUTTON */}
-          <div style={{ 
-            margin: '2rem 0',
-            padding: '1rem'
-          }}>
-            <a 
-              href="/request"
-              style={{
-                display: 'inline-block',
-                background: '#ffffff',
-                color: '#ff6b9d',
-                padding: '1rem 2rem',
-                borderRadius: '50px',
-                textDecoration: 'none',
-                fontWeight: 'bold',
-                fontSize: '1.2rem',
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-                border: '3px solid #ff6b9d',
-                transition: 'transform 0.2s'
-              }}
-            >
-              ✨ REQUEST YOUR PROFILE ✨
-            </a>
-          </div>
         </div>
+
         {/* Search and Filters */}
         <div style={{
           background: 'rgba(255, 255, 255, 0.95)',
