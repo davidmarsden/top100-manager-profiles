@@ -635,7 +635,7 @@ const App = () => {
             ⚽ Celebrating 25 Seasons of Soccer Manager Worlds Excellence ⚽
           </p>
           <p style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-            Part of the Top 100 Community • Est. 2000
+            Part of the Top 100 Community • Est. 2015
           </p>
         </div>
       </div>
