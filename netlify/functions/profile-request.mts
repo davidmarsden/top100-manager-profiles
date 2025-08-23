@@ -85,6 +85,46 @@ async function addManagerProfile(profileData: any) {
   try {
     console.log('Attempting to add manager profile automatically...');
     
+    // Build signature from available content
+    let signature = '';
+    if (profileData.careerHighlights) {
+      signature = profileData.careerHighlights.substring(0, 150);
+    } else if (profileData.tactics) {
+      signature = profileData.tactics.substring(0, 150);
+    } else if (profileData.memorableMoment) {
+      signature = profileData.memorableMoment.substring(0, 150);
+    } else {
+      signature = `${profileData.managerType || 'Rising'} manager from ${profileData.clubName}`;
+    }
+    
+    // Build comprehensive story
+    let fullStory = '';
+    if (profileData.story) {
+      fullStory += profileData.story + '\n\n';
+    }
+    if (profileData.careerHighlights) {
+      fullStory += `Career Highlights: ${profileData.careerHighlights}\n\n`;
+    }
+    if (profileData.tactics) {
+      fullStory += `Tactical Philosophy: ${profileData.tactics}\n\n`;
+    }
+    if (profileData.formation) {
+      fullStory += `Favourite Formation: ${profileData.formation}\n\n`;
+    }
+    if (profileData.memorableMoment) {
+      fullStory += `Most Memorable Moment: ${profileData.memorableMoment}\n\n`;
+    }
+    if (profileData.fearedOpponent) {
+      fullStory += `Most Feared Opponent: ${profileData.fearedOpponent}\n\n`;
+    }
+    if (profileData.ambitions) {
+      fullStory += `Future Ambitions: ${profileData.ambitions}`;
+    }
+    
+    if (!fullStory.trim()) {
+      fullStory = `${profileData.managerName} manages ${profileData.clubName} in Top 100. A dedicated manager contributing to the community's rich 25-season history.`;
+    }
+    
     // Call the add-manager API to publish the profile
     const response = await fetch('/api/add-manager', {
       method: 'POST',
@@ -96,12 +136,12 @@ async function addManagerProfile(profileData: any) {
         name: profileData.managerName,
         club: profileData.clubName,
         division: profileData.division || 5,
-        type: 'rising', // Default new submissions to 'rising'
+        type: profileData.managerType || 'rising',
         points: profileData.points || 1000,
         games: profileData.games || 100,
         avgPoints: profileData.avgPoints || ((profileData.points || 1000) / (profileData.games || 100)),
-        signature: profileData.achievements ? profileData.achievements.substring(0, 100) : 'New Top 100 manager on the rise',
-        story: profileData.story || 'A promising manager joining the Top 100 community.'
+        signature: signature,
+        story: fullStory.trim()
       })
     });
     
