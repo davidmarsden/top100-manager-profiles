@@ -33,12 +33,11 @@ async function submitProfile(req: Request) {
       "Club Name": body["Club Name"],
       "Division": body["Division"] ?? "",
       "Career Highlights": body["Career Highlights"] ?? "",
-      "Favourite Formation ": body["Favourite Formation "] ?? "",
-      "Tactical Philosophy ": body["Tactical Philosophy "] ?? "",
+      "Favourite Formation": body["Favourite Formation"] ?? "",
+      "Tactical Philosophy": body["Tactical Philosophy"] ?? "",
       "Most Memorable Moment": body["Most Memorable Moment"] ?? "",
-      "Most Feared Opponent ": body["Most Feared Opponent "] ?? "",
-      "Future Ambitions ": body["Future Ambitions "] ?? "",
-      "Your Top 100 Story": body["Your Top 100 Story"] ?? "",
+      "Most Feared Opponent": body["Most Feared Opponent"] ?? "",
+      "Future Ambitions": body["Future Ambitions"] ?? "",
       "Story": body["Story"] ?? "",
       "Status": "pending",
     };
@@ -58,7 +57,7 @@ async function submitProfile(req: Request) {
   }
 }
 
-// GET /api/profile-request  (you can filter on the client if you want only pending)
+// GET /api/profile-request
 async function listSubmissions() {
   try {
     const sheets = await getSheets();
@@ -78,7 +77,7 @@ async function listSubmissions() {
   }
 }
 
-// PUT /api/profile-request   { action: "approve"|"reject", submissionId: "sub_..." }
+// PUT /api/profile-request  { action: "approve"|"reject", submissionId: "sub_..." }
 async function approveOrReject(req: Request) {
   try {
     const { action, submissionId } = await req.json();
@@ -121,7 +120,7 @@ async function approveOrReject(req: Request) {
       return json(200, { success: true, message: "Submission rejected" });
     }
 
-    // APPROVE: 1) mark approved in Submissions
+    // APPROVE → mark approved…
     await sheets.spreadsheets.values.update({
       spreadsheetId: SHEET_ID,
       range: `${TAB_SUBMISSIONS}!${colLetters(statusIdx)}${rowNumber}`,
@@ -129,7 +128,7 @@ async function approveOrReject(req: Request) {
       requestBody: { values: [["approved"]] }
     });
 
-    // 2) append to Managers
+    // …and publish to Managers
     const managerId = (rowData["Manager Name"] || "")
       .toLowerCase()
       .replace(/[^a-z0-9]/g, "-")
@@ -138,23 +137,21 @@ async function approveOrReject(req: Request) {
 
     const signature =
       (rowData["Career Highlights"] ||
-       rowData["Tactical Philosophy "] ||
+       rowData["Tactical Philosophy"] ||
        rowData["Most Memorable Moment"] ||
-       rowData["Your Top 100 Story"] ||
        rowData["Story"] ||
        `${rowData["Manager Name"]} - ${rowData["Club Name"]}`
       ).slice(0,150);
 
     const storyParts = [
-      rowData["Your Top 100 Story"],
       rowData["Story"],
       rowData["Career Highlights"] && `Career Highlights: ${rowData["Career Highlights"]}`,
-      rowData["Tactical Philosophy "] && `Tactical Philosophy: ${rowData["Tactical Philosophy "]}`,
-      rowData["Favourite Formation "] && `Favourite Formation: ${rowData["Favourite Formation "]}`,
+      rowData["Tactical Philosophy"] && `Tactical Philosophy: ${rowData["Tactical Philosophy"]}`,
+      rowData["Favourite Formation"] && `Favourite Formation: ${rowData["Favourite Formation"]}`,
       rowData["Most Memorable Moment"] && `Most Memorable Moment: ${rowData["Most Memorable Moment"]}`,
-      rowData["Most Feared Opponent "] && `Most Feared Opponent: ${rowData["Most Feared Opponent "]}`,
-      rowData["Future Ambitions "] && `Future Ambitions: ${rowData["Future Ambitions "]}`,
-    ].filter(Boolean);
+      rowData["Most Feared Opponent"] && `Most Feared Opponent: ${rowData["Most Feared Opponent"]}`,
+      rowData["Future Ambitions"] && `Future Ambitions: ${rowData["Future Ambitions"]}`,
+    ].filter(Boolean) as string[];
 
     const fullStory = storyParts.join("\n\n").trim();
 
