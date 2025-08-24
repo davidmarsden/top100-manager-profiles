@@ -299,7 +299,7 @@
       // Managers
       let managers = [];
       try {
-        const res = await fetch('/api/managers');
+        const res = await fetch(`/api/manager?id=${encodeURIComponent(idFromRoute)}`);
         if (!res.ok) throw new Error(`Managers API ${res.status}`);
         const txt = await res.text();
         if (txt.startsWith('<!DOCTYPE')) throw new Error('Managers API returned HTML');
