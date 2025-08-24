@@ -586,7 +586,7 @@ const App = () => {
                 style={{
                   width: "100%",
                   padding: "0.75rem",
-                  border: "2px solid #e5e7eb",
+                  border: "2px solid '#e5e7eb'",
                   borderRadius: "8px",
                   fontSize: "1rem",
                 }}
