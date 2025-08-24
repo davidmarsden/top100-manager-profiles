@@ -26,19 +26,19 @@
   status = 200
   force = true
 
-# query-string style
 [[redirects]]
   from = "/api/manager"
   to   = "/.netlify/functions/manager"
   status = 200
   force = true
 
-# slug style (/api/manager/<id>)
 [[redirects]]
   from = "/api/manager/*"
   to   = "/.netlify/functions/manager"
   status = 200
   force = true
+
+# keep your /admin redirect, then the SPA fallback LAST
 
 # ---- Admin (static) ----
 [[redirects]]
