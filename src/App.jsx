@@ -22,7 +22,7 @@ const App = () => {
   const fetchManagers = async () => {
     try {
       console.log('Fetching managers from /api/managers...');
-      const response = await fetch('/api/managers');
+      const res = await fetch(`/api/manager?id=${encodeURIComponent(idFromRoute)}`);
       console.log('Response status:', response.status);
       
       if (!response.ok) {
