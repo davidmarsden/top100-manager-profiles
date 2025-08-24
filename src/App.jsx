@@ -10,6 +10,49 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+// open the profile from the server by slug
+const openProfileBySlug = async (slug) => {
+  try {
+    const res = await fetch(`/api/manager?id=${encodeURIComponent(slug)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to load profile");
+
+    const m = {
+      id: data.id || slug,
+      name: data.name || "",
+      club: data.club || "",
+      division: String(data.division ?? ""),
+      type: (data.type || "rising").toLowerCase(),
+      points: Number(data.points || 0),
+      games: Number(data.games || 0),
+      avgPoints:
+        data.avgPoints != null
+          ? Number(data.avgPoints)
+          : Number(data.games ? (Number(data.points || 0) / Number(data.games || 1)) : 0),
+      signature: data.signature || "",
+      story: data.story || "",
+    };
+    setSelectedManager(m);
+  } catch (e) {
+    console.error("openProfileBySlug error:", e);
+    setSelectedManager(null);
+  }
+};
+
+// on mount & on back/forward, reflect URL → UI
+useEffect(() => {
+  const match = window.location.pathname.match(/^\/profile\/([^/]+)$/);
+  if (match) openProfileBySlug(decodeURIComponent(match[1]));
+
+  const onPop = () => {
+    const m = window.location.pathname.match(/^\/profile\/([^/]+)$/);
+    if (m) openProfileBySlug(decodeURIComponent(m[1]));
+    else setSelectedManager(null);
+  };
+  window.addEventListener("popstate", onPop);
+  return () => window.removeEventListener("popstate", onPop);
+}, []);
+
 // load a single manager (by slug) and open the drawer
 const openProfileBySlug = async (slug) => {
   try {
@@ -234,19 +277,9 @@ useEffect(() => {
 <button
   onClick={() => {
     setSelectedManager(null);
-    window.history.pushState(null, "", "/"); // go back to list URL
+    window.history.pushState(null, "", "/");
   }}
-  style={{
-    background: "none",
-    border: "none",
-    color: "#fff",
-    cursor: "pointer",
-    fontSize: "1rem",
-    fontWeight: "500",
-    display: "flex",
-    alignItems: "center",
-    gap: "0.5rem",
-  }}
+  ...
 >
   ← Back to Managers
 </button>
@@ -780,7 +813,7 @@ useEffect(() => {
                     </p>
                   )}
 
-   <div style={{ textAlign: "center" }}>
+<div style={{ textAlign: "center" }}>
   <a
     style={{ color: "#ff9a9e", fontWeight: 500 }}
     href={`/profile/${slug}`}
