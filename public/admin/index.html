@@ -263,185 +263,215 @@
         </div>
     </div>
 
-    <script>
-        async function loadData() {
-            try {
-                console.log('Loading admin data...');
-                
-                // Load managers with error handling
-                let managers = [];
-                try {
-                    console.log('Fetching managers...');
-                    const managersResponse = await fetch('/api/managers');
-                    console.log('Managers response status:', managersResponse.status);
-                    
-                    if (!managersResponse.ok) {
-                        throw new Error(`Managers API returned ${managersResponse.status}`);
-                    }
-                    
-                    const managersText = await managersResponse.text();
-                    console.log('Managers response text preview:', managersText.substring(0, 100));
-                    
-                    if (managersText.startsWith('<!DOCTYPE')) {
-                        throw new Error('Managers API returned HTML instead of JSON - routing issue');
-                    }
-                    
-                    managers = JSON.parse(managersText);
-                    console.log('Managers loaded successfully:', managers.length);
-                } catch (error) {
-                    console.error('Error loading managers:', error);
-                    managers = []; // Fallback to empty array
-                }
-                
-                // Load profile requests with error handling
-                let requests = [];
-                try {
-                    console.log('Fetching profile requests...');
-                    const requestsResponse = await fetch('/api/profile-request');
-                    console.log('Requests response status:', requestsResponse.status);
-                    
-                    if (!requestsResponse.ok) {
-                        throw new Error(`Profile requests API returned ${requestsResponse.status}`);
-                    }
-                    
-                    const requestsText = await requestsResponse.text();
-                    console.log('Requests response text preview:', requestsText.substring(0, 100));
-                    
-                    if (requestsText.startsWith('<!DOCTYPE')) {
-                        throw new Error('Profile requests API returned HTML instead of JSON - routing issue');
-                    }
-                    
-                    requests = JSON.parse(requestsText);
-                    console.log('Requests loaded successfully:', requests.length);
-                } catch (error) {
-                    console.error('Error loading profile requests:', error);
-                    requests = []; // Fallback to empty array
-                }
-                
-                updateStats(managers, requests);
-                displayRequests(requests);
-                
-            } catch (error) {
-                console.error('Critical error loading admin data:', error);
-                document.getElementById('requests-container').innerHTML = `
-                    <div class="empty-state">
-                        <h3>⚠️ Error Loading Data</h3>
-                        <p><strong>Error:</strong> ${error.message}</p>
-                        <p><strong>Possible causes:</strong></p>
-                        <ul style="text-align: left; display: inline-block;">
-                            <li>API functions not deployed correctly</li>
-                            <li>Routing issues with /api/* paths</li>
-                            <li>Network connectivity problems</li>
-                        </ul>
-                        <p>Check the browser console for more details.</p>
-                    </div>
-                `;
-            }
-        }
-        
-        function updateStats(managers, requests) {
-            document.getElementById('total-managers').textContent = managers.length;
-            document.getElementById('pending-requests').textContent = requests.filter(r => r.status === 'pending').length;
-            document.getElementById('division-1').textContent = managers.filter(m => m.division === 1).length;
-            document.getElementById('legends').textContent = managers.filter(m => m.type === 'legend').length;
-        }
-        
-        function displayRequests(requests) {
-            const container = document.getElementById('requests-container');
-            window.currentRequests = requests; // Store for copy function
-            
-            if (requests.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <svg fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        <h3>No profile requests</h3>
-                        <p>All caught up! No pending profile requests at the moment.</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            container.innerHTML = requests.map(request => `
-                <div class="request-item">
-                    <div class="request-header">
-                        <div>
-                            <div class="request-name">${escapeHtml(request.managerName)}</div>
-                            <div class="request-club">${escapeHtml(request.clubName)}</div>
-                            ${request.division ? `<div class="request-club">Division ${request.division}</div>` : ''}
-                        </div>
-                        <div class="request-date">
-                            ${new Date(request.timestamp).toLocaleDateString()}
-                        </div>
-                    </div>
-                    
-                    <div><strong>Contact:</strong> ${escapeHtml(request.contactInfo)}</div>
-                    
-                    ${request.achievements ? `
-                        <div style="margin-top: 0.5rem;">
-                            <strong>Achievements:</strong> ${escapeHtml(request.achievements)}
-                        </div>
-                    ` : ''}
-                    
-                    ${request.story ? `
-                        <div class="request-story">
-                            <strong>Story:</strong><br>
-                            ${escapeHtml(request.story).replace(/\n/g, '<br>')}
-                        </div>
-                    ` : ''}
-                    
-                    <div style="margin-top: 1rem;">
-                        <button class="btn" onclick="copyToClipboard('${request.id}')">
-                            📋 Copy Details
-                        </button>
-                        <button class="btn btn-secondary" onclick="markAsProcessed('${request.id}')">
-                            ✅ Mark Processed
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-        
-        function copyToClipboard(requestId) {
-            // Find the request
-            const requests = window.currentRequests || [];
-            const request = requests.find(r => r.id === requestId);
-            
-            if (request) {
-                const text = `Manager Name: ${request.managerName}
-Club: ${request.clubName}
-${request.division ? `Division: ${request.division}` : ''}
-Contact: ${request.contactInfo}
-${request.achievements ? `Achievements: ${request.achievements}` : ''}
-${request.story ? `Story: ${request.story}` : ''}
-Submitted: ${new Date(request.timestamp).toLocaleString()}`;
-                
-                navigator.clipboard.writeText(text).then(() => {
-                    alert('Request details copied to clipboard!');
-                });
-            }
-        }
-        
-        async function markAsProcessed(requestId) {
-            if (confirm('Mark this request as processed?')) {
-                // In a real implementation, you'd update the request status
-                alert('Request marked as processed! (Feature to be implemented)');
-                loadData(); // Reload data
-            }
-        }
-        
-        // Load data on page load
-        loadData();
-        
-        // Auto-refresh every 30 seconds
-        setInterval(loadData, 30000);
-    </script>
+<script>
+  // ---- helpers ------------------------------------------------------------
+  const escapeHtml = (text = "") => {
+    const div = document.createElement('div');
+    div.textContent = String(text ?? "");
+    return div.innerHTML;
+  };
+  const toNumber = (v) => (v === undefined || v === null || v === "" ? null : Number(v));
+
+  // Map a row returned by /api/profile-request (Sheet headers) into camelCase the UI uses
+  function normalizeSubmission(row) {
+    return {
+      id: row["Request ID"] || "",
+      timestamp: row["Timestamp"] || "",
+      status: row["Status"] || "",
+      managerName: row["Manager Name"] || "",
+      clubName: row["Club Name"] || "",
+      division: row["Division"] || "",
+      careerHighlights: row["Career Highlights"] || "",
+      favouriteFormation: row["Favourite Formation"] || "",
+      tacticalPhilosophy: row["Tactical Philosophy"] || "",
+      mostMemorableMoment: row["Most Memorable Moment"] || "",
+      mostFearedOpponent: row["Most Feared Opponent"] || "",
+      futureAmbitions: row["Future Ambitions"] || "",
+      story: row["Story"] || ""
+      // (contactInfo was never in the Sheet; omitting)
+    };
+  }
+
+  async function loadData() {
+    try {
+      console.log('Loading admin data...');
+
+      // Managers
+      let managers = [];
+      try {
+        const res = await fetch('/api/managers');
+        if (!res.ok) throw new Error(`Managers API ${res.status}`);
+        const txt = await res.text();
+        if (txt.startsWith('<!DOCTYPE')) throw new Error('Managers API returned HTML');
+        managers = JSON.parse(txt);
+      } catch (e) {
+        console.error('Managers load error:', e);
+        managers = [];
+      }
+
+      // Submissions
+      let requests = [];
+      try {
+        const res = await fetch('/api/profile-request');
+        if (!res.ok) throw new Error(`Profile requests API ${res.status}`);
+        const txt = await res.text();
+        if (txt.startsWith('<!DOCTYPE')) throw new Error('Profile requests API returned HTML');
+        const raw = JSON.parse(txt) || [];
+        requests = raw.map(normalizeSubmission);
+      } catch (e) {
+        console.error('Requests load error:', e);
+        requests = [];
+      }
+
+      updateStats(managers, requests);
+      displayRequests(requests);
+    } catch (error) {
+      console.error('Critical error loading admin data:', error);
+      document.getElementById('requests-container').innerHTML = `
+        <div class="empty-state">
+          <h3>⚠️ Error Loading Data</h3>
+          <p>${escapeHtml(error.message)}</p>
+        </div>`;
+    }
+  }
+
+  function updateStats(managers, requests) {
+    document.getElementById('total-managers').textContent = managers.length;
+    document.getElementById('pending-requests').textContent = requests.filter(r => r.status === 'pending').length;
+
+    // Division value might be a string in Sheets
+    const d1Count = managers.filter(m => String(m.division) === "1").length;
+    document.getElementById('division-1').textContent = d1Count;
+
+    // "legends" only if your Managers rows include a type field; otherwise 0
+    const legends = managers.filter(m => String(m.type || "").toLowerCase() === "legend").length;
+    document.getElementById('legends').textContent = legends;
+  }
+
+  function displayRequests(requests) {
+    const container = document.getElementById('requests-container');
+    window.currentRequests = requests;
+
+    if (!requests.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <svg fill="currentColor" viewBox="0 0 20 20">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <h3>No profile requests</h3>
+          <p>All caught up! No pending profile requests at the moment.</p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = requests.map(r => `
+      <div class="request-item">
+        <div class="request-header">
+          <div>
+            <div class="request-name">${escapeHtml(r.managerName)}</div>
+            <div class="request-club">${escapeHtml(r.clubName)}</div>
+            ${r.division ? `<div class="request-club">Division ${escapeHtml(r.division)}</div>` : ''}
+            <div class="request-date">${r.timestamp ? new Date(r.timestamp).toLocaleString() : ''}</div>
+            <div class="request-club" style="margin-top:.25rem;">Status: <strong>${escapeHtml(r.status)}</strong></div>
+            <div class="request-club" style="font-size:.9rem;color:#999">Request ID: ${escapeHtml(r.id)}</div>
+          </div>
+        </div>
+
+        ${r.careerHighlights ? `
+          <div style="margin-top:.5rem;"><strong>Career Highlights:</strong> ${escapeHtml(r.careerHighlights)}</div>` : ''}
+
+        ${r.tacticalPhilosophy ? `
+          <div style="margin-top:.5rem;"><strong>Tactical Philosophy:</strong> ${escapeHtml(r.tacticalPhilosophy)}</div>` : ''}
+
+        ${r.favouriteFormation ? `
+          <div style="margin-top:.5rem;"><strong>Favourite Formation:</strong> ${escapeHtml(r.favouriteFormation)}</div>` : ''}
+
+        ${r.mostMemorableMoment ? `
+          <div style="margin-top:.5rem;"><strong>Most Memorable Moment:</strong> ${escapeHtml(r.mostMemorableMoment)}</div>` : ''}
+
+        ${r.mostFearedOpponent ? `
+          <div style="margin-top:.5rem;"><strong>Most Feared Opponent:</strong> ${escapeHtml(r.mostFearedOpponent)}</div>` : ''}
+
+        ${r.futureAmbitions ? `
+          <div style="margin-top:.5rem;"><strong>Future Ambitions:</strong> ${escapeHtml(r.futureAmbitions)}</div>` : ''}
+
+        ${r.story ? `
+          <div class="request-story" style="margin-top:1rem;">
+            <strong>Story:</strong><br>${escapeHtml(r.story).replace(/\n/g,'<br>')}
+          </div>` : ''}
+
+        <div style="margin-top:1rem;">
+          ${r.status === 'pending' ? `
+            <button class="btn" onclick="approveSubmission('${r.id}')">✅ Approve & Publish</button>
+            <button class="btn btn-secondary" onclick="rejectSubmission('${r.id}')">✖️ Reject</button>
+          ` : `
+            <button class="btn btn-secondary" onclick="approveSubmission('${r.id}')">Re-publish</button>
+          `}
+          <button class="btn" onclick="copyToClipboard('${r.id}')">📋 Copy Details</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function copyToClipboard(requestId) {
+    const r = (window.currentRequests || []).find(x => x.id === requestId);
+    if (!r) return;
+    const text =
+`Manager Name: ${r.managerName}
+Club: ${r.clubName}
+${r.division ? `Division: ${r.division}\n` : ""}
+${r.careerHighlights ? `Career Highlights: ${r.careerHighlights}\n` : "" }
+${r.tacticalPhilosophy ? `Tactical Philosophy: ${r.tacticalPhilosophy}\n` : "" }
+${r.favouriteFormation ? `Favourite Formation: ${r.favouriteFormation}\n` : "" }
+${r.mostMemorableMoment ? `Most Memorable Moment: ${r.mostMemorableMoment}\n` : "" }
+${r.mostFearedOpponent ? `Most Feared Opponent: ${r.mostFearedOpponent}\n` : "" }
+${r.futureAmbitions ? `Future Ambitions: ${r.futureAmbitions}\n` : "" }
+${r.story ? `Story:\n${r.story}\n` : "" }
+Request ID: ${r.id}
+Submitted: ${r.timestamp ? new Date(r.timestamp).toLocaleString() : ""}`;
+    navigator.clipboard.writeText(text).then(() => alert('Request details copied!'));
+  }
+
+  async function approveSubmission(requestId) {
+    try {
+      const res = await fetch('/api/profile-request', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve', submissionId: requestId })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.message || 'Failed to approve');
+      alert(data.message || 'Approved & published!');
+      loadData();
+    } catch (e) {
+      console.error('Approve error:', e);
+      alert('Approve failed: ' + e.message);
+    }
+  }
+
+  async function rejectSubmission(requestId) {
+    if (!confirm('Reject this submission?')) return;
+    try {
+      const res = await fetch('/api/profile-request', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reject', submissionId: requestId })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.message || 'Failed to reject');
+      alert(data.message || 'Rejected.');
+      loadData();
+    } catch (e) {
+      console.error('Reject error:', e);
+      alert('Reject failed: ' + e.message);
+    }
+  }
+
+  // initial load & auto-refresh
+  loadData();
+  setInterval(loadData, 30000);
+</script>
+
+
 </body>
 </html>
