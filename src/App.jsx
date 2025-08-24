@@ -123,26 +123,26 @@ const App = () => {
   };
 
   const getBadgeStyle = (type, division) => {
-    if (type === 'division') {
-      const colors = {
-        1: { background: '#fbbf24', color: '#92400e' },
-        2: { background: '#d1d5db', color: '#374151' },
-        3: { background: '#d97706', color: '#fbbf24' },
-        4: { background: '#10b981', color: '#ecfdf5' },
-        5: { background: '#3b82f6', color: '#dbeafe' }
-      };
-      return colors[division] || { background: '#6b7280', color: 'white' };
-    } else {
-      const colors = {
-        'legend': { background: '#7c3aed', color: '#e5e7eb' },
-        'elite': { background: '#dc2626', color: '#fee2e2' },
-        'rising': { background: '#2563eb', color: '#dbeafe' },
-        'veteran': { background: '#059669', color: '#d1fae5' }
-      };
-      return colors[type] || { background: '#6b7280', color: 'white' };
-    }
-  };
-
+  if (type === 'division') {
+    const d = Number(division); // <— normalize "1"/1
+    const colors = {
+      1: { background: '#fbbf24', color: '#92400e' },
+      2: { background: '#d1d5db', color: '#374151' },
+      3: { background: '#d97706', color: '#fbbf24' },
+      4: { background: '#10b981', color: '#ecfdf5' },
+      5: { background: '#3b82f6', color: '#dbeafe' }
+    };
+    return colors[d] || { background: '#6b7280', color: 'white' };
+  } else {
+    const colors = {
+      legend:  { background: '#7c3aed', color: '#e5e7eb' },
+      elite:   { background: '#dc2626', color: '#fee2e2' },
+      rising:  { background: '#2563eb', color: '#dbeafe' },
+      veteran: { background: '#059669', color: '#d1fae5' }
+    };
+    return colors[(type || '').toLowerCase()] || { background: '#6b7280', color: 'white' };
+  }
+};
   // Debug info
   console.log('App render - managers:', managers.length, 'filtered:', filteredManagers.length, 'loading:', loading, 'error:', error);
 
