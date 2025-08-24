@@ -11,59 +11,60 @@ const App = () => {
   const [error, setError] = useState("");
 
   // --- fetch list + de-dupe ---
-  const fetchManagers = async () => {
-    try {
-      const res = await fetch("/api/managers");
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      const data = await res.json();
+  // put this inside App, once
+const fetchManagers = async () => {
+  try {
+    const res = await fetch("/api/managers");
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    const data = await res.json();
 
-      // normalize rows
-      const normalized = (Array.isArray(data) ? data : []).map((m) => ({
-        id:
-          m.id ||
-          String(m.name || "")
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-+|-+$/g, ""),
-        name: m.name || "",
-        club: m.club || "",
-        division: String(m.division ?? ""),
-        type: (m.type || "rising").toLowerCase(),
-        points: Number(m.points || 0),
-        games: Number(m.games || 0),
-        avgPoints:
-          m.avgPoints != null
-            ? Number(m.avgPoints)
-            : Number(m.games ? (Number(m.points || 0) / Number(m.games || 1)) : 0),
-        signature: m.signature || "",
-        story: m.story || "",
-      }));
-
-      // de-dupe by id (fallback to slug(name))
-      const slugify = (s) =>
-        String(s || "")
+    // normalize
+    const normalized = (Array.isArray(data) ? data : []).map((m) => ({
+      id:
+        m.id ||
+        String(m.name || "")
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-+|-+$/g, "");
-      const seen = new Set();
-      const uniq = [];
-      for (const m of normalized) {
-        const key = m.id || slugify(m.name);
-        if (!seen.has(key)) {
-          seen.add(key);
-          uniq.push(m);
-        }
-      }
+          .replace(/^-+|-+$/g, ""),
+      name: m.name || "",
+      club: m.club || "",
+      division: String(m.division ?? ""),
+      type: (m.type || "rising").toLowerCase(),
+      points: Number(m.points || 0),
+      games: Number(m.games || 0),
+      avgPoints:
+        m.avgPoints != null
+          ? Number(m.avgPoints)
+          : Number(m.games ? (Number(m.points || 0) / Number(m.games || 1)) : 0),
+      signature: m.signature || "",
+      story: m.story || "",
+    }));
 
-      setManagers(uniq);
-      setError("");
-    }; (e) {
-      setError(e.message || "Failed to load managers");
-      setManagers([]); // or your sample fallback if you prefer
-    } finally {
-      setLoading(false);
+    // de-dupe by id (fallback to slug(name))
+    const slugify = (s) =>
+      String(s || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+    const seen = new Set();
+    const uniq = [];
+    for (const m of normalized) {
+      const key = m.id || slugify(m.name);
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniq.push(m);
+      }
     }
-  };
+
+    setManagers(uniq);
+    setError("");
+  } catch (e) {
+    setError(e.message || "Failed to load managers");
+    setManagers([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // --- open profile from URL slug ---
   const openProfileBySlug = async (slug) => {
