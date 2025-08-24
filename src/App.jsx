@@ -10,7 +10,7 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // --- fetch list + de-dupe ---
+  // --- fetch list + blah de-dupe ---
   const fetchManagers = async () => {
     try {
       const res = await fetch("/api/managers");
