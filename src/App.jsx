@@ -612,7 +612,16 @@ const App = () => {
 
                 <div style={{ textAlign: 'center' }}>
                   <span style={{ color: '#ff9a9e', fontWeight: '500' }}>
-                    View Profile →
+                    // before
+// <a href={`/profile/${manager.name}`}>View Profile →</a>
+
+// after
+const slug = (manager.id || manager.name)
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g,'-')
+  .replace(/^-+|-+$/g,'');
+
+<a href={`/profile/${slug}`}>View Profile →</a>
                   </span>
                 </div>
               </div>
