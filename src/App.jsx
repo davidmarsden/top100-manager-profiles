@@ -57,7 +57,7 @@ const App = () => {
 
       setManagers(uniq);
       setError("");
-    } catch (e) {
+    }; (e) {
       setError(e.message || "Failed to load managers");
       setManagers([]); // or your sample fallback if you prefer
     } finally {
