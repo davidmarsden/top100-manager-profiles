@@ -230,66 +230,38 @@ const App = () => {
               marginBottom: '2rem', 
               flexWrap: 'wrap' 
             }}>
-              <span style={{
-                padding: '0.5rem 1rem',
-                borderRadius: '25px',
-                fontSize: '0.9rem',
-                fontWeight: 'bold',
-                ...getBadgeStyle('division', selectedManager.division)
-              }}>
-                Division {selectedManager.division}
-              </span>
-              <span style={{
-                padding: '0.5rem 1rem',
-                borderRadius: '25px',
-                fontSize: '0.9rem',
-                fontWeight: 'bold',
-                ...getBadgeStyle('type', selectedManager.type)
-              }}>
-                {selectedManager.type.charAt(0).toUpperCase() + selectedManager.type.slice(1)}
-              </span>
-            </div>
+{/* badges */}
+<span
+  style={{
+    padding: '0.5rem 1rem',
+    borderRadius: '25px',
+    fontSize: '0.9rem',
+    fontWeight: 'bold',
+    ...getBadgeStyle('division', selectedManager.division) // handles "1" or 1
+  }}
+>
+  Division {selectedManager.division ?? '—'}
+</span>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-              gap: '1rem',
-              marginBottom: '2rem'
-            }}>
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '1rem', 
-                background: '#f0fdf4', 
-                borderRadius: '8px' 
-              }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#166534' }}>
-                  {formatPoints(selectedManager.points)}
-                </div>
-                <div style={{ fontSize: '0.9rem', color: '#16a34a' }}>Total Points</div>
-              </div>
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '1rem', 
-                background: '#eff6ff', 
-                borderRadius: '8px' 
-              }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1e40af' }}>
-                  {selectedManager.games}
-                </div>
-                <div style={{ fontSize: '0.9rem', color: '#2563eb' }}>Games Played</div>
-              </div>
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '1rem', 
-                background: '#faf5ff', 
-                borderRadius: '8px' 
-              }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#7c2d12' }}>
-                  {formatAvgPoints(selectedManager.avgPoints)}
-                </div>
-                <div style={{ fontSize: '0.9rem', color: '#a855f7' }}>Avg Points</div>
-              </div>
-            </div>
+<span style={{ ...getBadgeStyle('division', manager.division) }}>
+  Div {manager.division ?? '—'}
+</span>
+<span style={{ ...getBadgeStyle('type', manager.type || 'rising') }}>
+  {(manager.type || 'rising')}
+</span>
+
+{/* stats */}
+<div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#166534' }}>
+  {formatPoints(selectedManager.points || 0)}
+</div>
+...
+<div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1e40af' }}>
+  {selectedManager.games || 0}
+</div>
+...
+<div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#7c2d12' }}>
+  {formatAvgPoints(selectedManager.avgPoints || 0)}
+</div>
 
             {selectedManager.signature && (
               <div style={{ marginBottom: '1.5rem' }}>
