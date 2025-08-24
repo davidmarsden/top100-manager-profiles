@@ -111,12 +111,7 @@ const App = () => {
   }, []);
 
   // initial list load
-  useEffect(() => {
-    fetchManagers();
-  }, []);
-
   
-
   useEffect(() => {
     filterManagers();
   }, [managers, searchTerm, selectedDivision, selectedType]);
