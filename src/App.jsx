@@ -231,12 +231,22 @@ useEffect(() => {
                 flexWrap: "wrap",
               }}
             >
- <button
+<button
   onClick={() => {
     setSelectedManager(null);
     window.history.pushState(null, "", "/"); // go back to list URL
   }}
-  ...
+  style={{
+    background: "none",
+    border: "none",
+    color: "#fff",
+    cursor: "pointer",
+    fontSize: "1rem",
+    fontWeight: "500",
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+  }}
 >
   ← Back to Managers
 </button>
