@@ -10,102 +10,112 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-// open the profile from the server by slug
-const openProfileBySlug = async (slug) => {
-  try {
-    const res = await fetch(`/api/manager?id=${encodeURIComponent(slug)}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Failed to load profile");
+  // --- fetch list + de-dupe ---
+  const fetchManagers = async () => {
+    try {
+      const res = await fetch("/api/managers");
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const data = await res.json();
 
-    const m = {
-      id: data.id || slug,
-      name: data.name || "",
-      club: data.club || "",
-      division: String(data.division ?? ""),
-      type: (data.type || "rising").toLowerCase(),
-      points: Number(data.points || 0),
-      games: Number(data.games || 0),
-      avgPoints:
-        data.avgPoints != null
-          ? Number(data.avgPoints)
-          : Number(data.games ? (Number(data.points || 0) / Number(data.games || 1)) : 0),
-      signature: data.signature || "",
-      story: data.story || "",
-    };
-    setSelectedManager(m);
-  } catch (e) {
-    console.error("openProfileBySlug error:", e);
-    setSelectedManager(null);
-  }
-};
+      // normalize rows
+      const normalized = (Array.isArray(data) ? data : []).map((m) => ({
+        id:
+          m.id ||
+          String(m.name || "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, ""),
+        name: m.name || "",
+        club: m.club || "",
+        division: String(m.division ?? ""),
+        type: (m.type || "rising").toLowerCase(),
+        points: Number(m.points || 0),
+        games: Number(m.games || 0),
+        avgPoints:
+          m.avgPoints != null
+            ? Number(m.avgPoints)
+            : Number(m.games ? (Number(m.points || 0) / Number(m.games || 1)) : 0),
+        signature: m.signature || "",
+        story: m.story || "",
+      }));
 
-// on mount & on back/forward, reflect URL → UI
-useEffect(() => {
-  const match = window.location.pathname.match(/^\/profile\/([^/]+)$/);
-  if (match) openProfileBySlug(decodeURIComponent(match[1]));
+      // de-dupe by id (fallback to slug(name))
+      const slugify = (s) =>
+        String(s || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+      const seen = new Set();
+      const uniq = [];
+      for (const m of normalized) {
+        const key = m.id || slugify(m.name);
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniq.push(m);
+        }
+      }
 
-  const onPop = () => {
-    const m = window.location.pathname.match(/^\/profile\/([^/]+)$/);
-    if (m) openProfileBySlug(decodeURIComponent(m[1]));
-    else setSelectedManager(null);
+      setManagers(uniq);
+      setError("");
+    } catch (e) {
+      setError(e.message || "Failed to load managers");
+      setManagers([]); // or your sample fallback if you prefer
+    } finally {
+      setLoading(false);
+    }
   };
-  window.addEventListener("popstate", onPop);
-  return () => window.removeEventListener("popstate", onPop);
-}, []);
 
-// load a single manager (by slug) and open the drawer
-const openProfileBySlug = async (slug) => {
-  try {
-    const res = await fetch(`/api/manager?id=${encodeURIComponent(slug)}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Failed to load profile");
+  // --- open profile from URL slug ---
+  const openProfileBySlug = async (slug) => {
+    try {
+      const res = await fetch(`/api/manager?id=${encodeURIComponent(slug)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load profile");
 
-    // shape it like our list items
-    const m = {
-      id: data.id || slug,
-      name: data.name || "",
-      club: data.club || "",
-      division: String(data.division ?? ""),
-      type: (data.type || "rising").toLowerCase(),
-      points: Number(data.points || 0),
-      games: Number(data.games || 0),
-      avgPoints:
-        data.avgPoints != null
-          ? Number(data.avgPoints)
-          : Number(data.games ? (Number(data.points || 0) / Number(data.games || 1)) : 0),
-      signature: data.signature || "",
-      story: data.story || "",
-    };
-    setSelectedManager(m);
-  } catch (e) {
-    console.error("openProfileBySlug error:", e);
-    setSelectedManager(null);
-  }
-};
-
-// on initial load, open profile if URL is /profile/:slug
-useEffect(() => {
-  const m = window.location.pathname.match(/^\/profile\/([^/]+)$/);
-  if (m) {
-    const slug = decodeURIComponent(m[1]);
-    openProfileBySlug(slug);
-  }
-  // handle back/forward
-  const onPop = () => {
-    const mm = window.location.pathname.match(/^\/profile\/([^/]+)$/);
-    if (mm) {
-      openProfileBySlug(decodeURIComponent(mm[1]));
-    } else {
+      const m = {
+        id: data.id || slug,
+        name: data.name || "",
+        club: data.club || "",
+        division: String(data.division ?? ""),
+        type: (data.type || "rising").toLowerCase(),
+        points: Number(data.points || 0),
+        games: Number(data.games || 0),
+        avgPoints:
+          data.avgPoints != null
+            ? Number(data.avgPoints)
+            : Number(
+                data.games ? (Number(data.points || 0) / Number(data.games || 1)) : 0
+              ),
+        signature: data.signature || "",
+        story: data.story || "",
+      };
+      setSelectedManager(m);
+    } catch (e) {
+      console.error("openProfileBySlug error:", e);
       setSelectedManager(null);
     }
   };
-  window.addEventListener("popstate", onPop);
-  return () => window.removeEventListener("popstate", onPop);
-}, []);
 
+  // reflect URL -> UI once, and handle back/forward
+  useEffect(() => {
+    const match = window.location.pathname.match(/^\/profile\/([^/]+)$/);
+    if (match) openProfileBySlug(decodeURIComponent(match[1]));
+
+    const onPop = () => {
+      const m = window.location.pathname.match(/^\/profile\/([^/]+)$/);
+      if (m) openProfileBySlug(decodeURIComponent(m[1]));
+      else setSelectedManager(null);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  // initial list load
   useEffect(() => {
     fetchManagers();
   }, []);
+
+  
 
   useEffect(() => {
     filterManagers();
