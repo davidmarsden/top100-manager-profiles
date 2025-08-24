@@ -231,22 +231,15 @@ useEffect(() => {
                 flexWrap: "wrap",
               }}
             >
-              <button
-                onClick={() => setSelectedManager(null)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "#fff",
-                  cursor: "pointer",
-                  fontSize: "1rem",
-                  fontWeight: "500",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                }}
-              >
-                ← Back to Managers
-              </button>
+ <button
+  onClick={() => {
+    setSelectedManager(null);
+    window.history.pushState(null, "", "/"); // go back to list URL
+  }}
+  ...
+>
+  ← Back to Managers
+</button>
               <span style={{ color: "rgba(255, 255, 255, 0.7)" }}>|</span>
               <a
                 href="https://smtop100.blog"
@@ -777,15 +770,19 @@ useEffect(() => {
                     </p>
                   )}
 
-                  <div style={{ textAlign: "center" }}>
-                    <a
-                      style={{ color: "#ff9a9e", fontWeight: 500 }}
-                      href={`/profile/${slug}`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      View Profile →
-                    </a>
-                  </div>
+   <div style={{ textAlign: "center" }}>
+  <a
+    style={{ color: "#ff9a9e", fontWeight: 500 }}
+    href={`/profile/${slug}`}
+    onClick={(e) => {
+      e.preventDefault();
+      window.history.pushState(null, "", `/profile/${slug}`);
+      openProfileBySlug(slug);
+    }}
+  >
+    View Profile →
+  </a>
+</div>
                 </div>
               );
             })}
