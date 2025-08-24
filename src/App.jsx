@@ -570,33 +570,34 @@ const App = () => {
               </select>
             </div>
             <div>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: "0.5rem",
-                  fontWeight: 600,
-                  color: "#374151",
-                }}
-              >
-                Manager Type
-              </label>
-              <select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  border: "2px solid #e5e7eb",
-                  borderRadius: "8px",
-                  fontSize: "1rem",
-                }}
-              >
-                <option value="all">All Types</option>
-                <option value="legend">Legend</option>
-                <option value="elite">Elite</option>
-                <option value="rising">Rising Star</option>
-                <option value="veteran">Veteran</option>
-              </select>
+<label
+  style={{
+    display: "block",
+    marginBottom: "0.5rem",
+    fontWeight: 600,
+    color: "#374151",
+  }}
+>
+  Manager Type
+</label>
+
+<select
+  value={selectedType}
+  onChange={(e) => setSelectedType(e.target.value)}
+  style={{
+    width: "100%",
+    padding: "0.75rem",
+    border: "2px solid #e5e7eb",
+    borderRadius: "8px",
+    fontSize: "1rem",
+  }}
+>
+  <option value="all">All Types</option>
+  <option value="legend">Legend</option>
+  <option value="elite">Elite</option>
+  <option value="rising">Rising Star</option>
+  <option value="veteran">Veteran</option>
+</select>
             </div>
           </div>
         </div>
