@@ -11,60 +11,59 @@ const App = () => {
   const [error, setError] = useState("");
 
   // --- fetch list + de-dupe ---
-  // put this inside App, once
-const fetchManagers = async () => {
-  try {
-    const res = await fetch("/api/managers");
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    const data = await res.json();
+  const fetchManagers = async () => {
+    try {
+      const res = await fetch("/api/managers");
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const data = await res.json();
 
-    // normalize
-    const normalized = (Array.isArray(data) ? data : []).map((m) => ({
-      id:
-        m.id ||
-        String(m.name || "")
+      // normalize rows
+      const normalized = (Array.isArray(data) ? data : []).map((m) => ({
+        id:
+          m.id ||
+          String(m.name || "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, ""),
+        name: m.name || "",
+        club: m.club || "",
+        division: String(m.division ?? ""),
+        type: (m.type || "rising").toLowerCase(),
+        points: Number(m.points || 0),
+        games: Number(m.games || 0),
+        avgPoints:
+          m.avgPoints != null
+            ? Number(m.avgPoints)
+            : Number(m.games ? (Number(m.points || 0) / Number(m.games || 1)) : 0),
+        signature: m.signature || "",
+        story: m.story || "",
+      }));
+
+      // de-dupe by id (fallback to slug(name))
+      const slugify = (s) =>
+        String(s || "")
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-+|-+$/g, ""),
-      name: m.name || "",
-      club: m.club || "",
-      division: String(m.division ?? ""),
-      type: (m.type || "rising").toLowerCase(),
-      points: Number(m.points || 0),
-      games: Number(m.games || 0),
-      avgPoints:
-        m.avgPoints != null
-          ? Number(m.avgPoints)
-          : Number(m.games ? (Number(m.points || 0) / Number(m.games || 1)) : 0),
-      signature: m.signature || "",
-      story: m.story || "",
-    }));
-
-    // de-dupe by id (fallback to slug(name))
-    const slugify = (s) =>
-      String(s || "")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
-    const seen = new Set();
-    const uniq = [];
-    for (const m of normalized) {
-      const key = m.id || slugify(m.name);
-      if (!seen.has(key)) {
-        seen.add(key);
-        uniq.push(m);
+          .replace(/^-+|-+$/g, "");
+      const seen = new Set();
+      const uniq = [];
+      for (const m of normalized) {
+        const key = m.id || slugify(m.name);
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniq.push(m);
+        }
       }
-    }
 
-    setManagers(uniq);
-    setError("");
-  } catch (e) {
-    setError(e.message || "Failed to load managers");
-    setManagers([]);
-  } finally {
-    setLoading(false);
-  }
-};
+      setManagers(uniq);
+      setError("");
+    } catch (e) {
+      setError(e.message || "Failed to load managers");
+      setManagers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // --- open profile from URL slug ---
   const openProfileBySlug = async (slug) => {
@@ -112,84 +111,12 @@ const fetchManagers = async () => {
   }, []);
 
   // initial list load
-  
   useEffect(() => {
-    filterManagers();
-  }, [managers, searchTerm, selectedDivision, selectedType]);
+    fetchManagers();
+  }, []);
 
-  
-
-      const normalized = (Array.isArray(data) ? data : []).map((m) => ({
-        id:
-          m.id ||
-          (m.name || "")
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-+|-+$/g, ""),
-        name: m.name || "",
-        club: m.club || "",
-        division: String(m.division ?? ""),
-        type: (m.type || "rising").toLowerCase(),
-        points: Number(m.points || 0),
-        games: Number(m.games || 0),
-        avgPoints:
-          m.avgPoints != null
-            ? Number(m.avgPoints)
-            : Number(m.games ? (Number(m.points || 0) / Number(m.games || 1)) : 0),
-        signature: m.signature || "",
-        story: m.story || "",
-      }));
-
-      setManagers(normalized);
-      setError("");
-    } catch (e) {
-      setError(e.message || "Failed to load managers");
-      setManagers([
-        {
-          id: "scott-mckenzie",
-          name: "Scott McKenzie",
-          club: "FC Barcelona",
-          division: "1",
-          type: "legend",
-          points: 2856,
-          games: 1247,
-          avgPoints: 2.29,
-          signature:
-            "The master tactician who redefined what it means to be a champion",
-          story: "Scott McKenzie's legendary journey in Top 100...",
-        },
-        {
-          id: "glen-mullan",
-          name: "Glen Mullan",
-          club: "Real Madrid",
-          division: "1",
-          type: "elite",
-          points: 2243,
-          games: 987,
-          avgPoints: 2.27,
-          signature:
-            "The tactical perfectionist known for meticulous preparation",
-          story: "Glen Mullan represents the modern era of excellence...",
-        },
-        {
-          id: "david-marsden",
-          name: "David Marsden",
-          club: "Liverpool FC",
-          division: "2",
-          type: "veteran",
-          points: 1876,
-          games: 823,
-          avgPoints: 2.28,
-          signature: "The community builder who transformed Top 100",
-          story: "David Marsden's contribution extends far beyond the pitch...",
-        },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filterManagers = () => {
+  // filtering + sort
+  useEffect(() => {
     const term = searchTerm.toLowerCase();
     let filtered = managers.filter((m) => {
       const matchesSearch =
@@ -206,7 +133,7 @@ const fetchManagers = async () => {
 
     filtered.sort((a, b) => (b.points || 0) - (a.points || 0));
     setFilteredManagers(filtered);
-  };
+  }, [managers, searchTerm, selectedDivision, selectedType]);
 
   const formatPoints = (n) =>
     typeof n === "number" ? n.toLocaleString() : "0";
@@ -276,15 +203,25 @@ const fetchManagers = async () => {
                 flexWrap: "wrap",
               }}
             >
-<button
-  onClick={() => {
-    setSelectedManager(null);
-    window.history.pushState(null, "", "/");
-  }}
-  ...
->
-  ← Back to Managers
-</button>
+              <button
+                onClick={() => {
+                  setSelectedManager(null);
+                  window.history.pushState(null, "", "/");
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#fff",
+                  cursor: "pointer",
+                  fontSize: "1rem",
+                  fontWeight: "500",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                }}
+              >
+                ← Back to Managers
+              </button>
               <span style={{ color: "rgba(255, 255, 255, 0.7)" }}>|</span>
               <a
                 href="https://smtop100.blog"
@@ -471,6 +408,7 @@ const fetchManagers = async () => {
     );
   }
 
+  // ---------- List page ----------
   return (
     <div
       style={{
@@ -571,9 +509,9 @@ const fetchManagers = async () => {
         >
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-              gap: "1rem",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+            gap: "1rem",
             }}
           >
             <div>
@@ -618,7 +556,7 @@ const fetchManagers = async () => {
                 style={{
                   width: "100%",
                   padding: "0.75rem",
-                  border: "2px solid #e5e7eb",
+                  border: "2px solid "#e5e7eb",
                   borderRadius: "8px",
                   fontSize: "1rem",
                 }}
@@ -696,7 +634,7 @@ const fetchManagers = async () => {
               gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
               gap: "1.5rem",
             }}
-          >>
+          >
             {filteredManagers.map((manager) => {
               const slug =
                 (manager.id || manager.name)
@@ -815,19 +753,19 @@ const fetchManagers = async () => {
                     </p>
                   )}
 
-<div style={{ textAlign: "center" }}>
-  <a
-    style={{ color: "#ff9a9e", fontWeight: 500 }}
-    href={`/profile/${slug}`}
-    onClick={(e) => {
-      e.preventDefault();
-      window.history.pushState(null, "", `/profile/${slug}`);
-      openProfileBySlug(slug);
-    }}
-  >
-    View Profile →
-  </a>
-</div>
+                  <div style={{ textAlign: "center" }}>
+                    <a
+                      style={{ color: "#ff9a9e", fontWeight: 500 }}
+                      href={`/profile/${slug}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.history.pushState(null, "", `/profile/${slug}`);
+                        openProfileBySlug(slug);
+                      }}
+                    >
+                      View Profile →
+                    </a>
+                  </div>
                 </div>
               );
             })}
@@ -855,5 +793,3 @@ const fetchManagers = async () => {
     </div>
   );
 };
-
-export default App;
