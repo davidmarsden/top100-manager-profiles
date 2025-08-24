@@ -4,42 +4,50 @@
   functions = "netlify/functions"
 
 [functions]
-  # If you still use Netlify Blobs, keep it here too: ["googleapis", "@netlify/blobs"]
+  node_bundler = "esbuild"
   external_node_modules = ["googleapis"]
 
-# Optional but recommended to avoid old Node runtimes
-[build.environment]
-  NODE_VERSION = "20"
-
-# API routes (explicit; handle trailing slashes and slugs)
+# ---- API redirects (explicit) ----
 [[redirects]]
   from = "/api/managers"
   to   = "/.netlify/functions/managers"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/api/managers/"
   to   = "/.netlify/functions/managers"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/api/profile-request"
   to   = "/.netlify/functions/profile-request"
   status = 200
+  force = true
 
+# query-string style
+[[redirects]]
+  from = "/api/manager"
+  to   = "/.netlify/functions/manager"
+  status = 200
+  force = true
+
+# slug style (/api/manager/<id>)
 [[redirects]]
   from = "/api/manager/*"
   to   = "/.netlify/functions/manager"
   status = 200
+  force = true
 
-# Static /admin (must come before SPA fallback)
+# ---- Admin (static) ----
 [[redirects]]
   from = "/admin"
-  to = "/admin/index.html"
+  to   = "/admin/index.html"
   status = 200
 
-# SPA fallback (must be last)
+# ---- SPA fallback (must be last!) ----
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to   = "/index.html"
   status = 200
