@@ -23,5 +23,3 @@ export default async (req: Request, _context: Context) => {
   }
 };
 
-// 👉 this is the key change so /api/managers AND /api/managers/ both work
-export const config = { path: "/api/managers/*" };
