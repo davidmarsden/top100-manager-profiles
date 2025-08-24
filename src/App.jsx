@@ -116,11 +116,7 @@ const App = () => {
     filterManagers();
   }, [managers, searchTerm, selectedDivision, selectedType]);
 
-  const fetchManagers = async () => {
-    try {
-      const res = await fetch("/api/managers");
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      const data = await res.json();
+  
 
       const normalized = (Array.isArray(data) ? data : []).map((m) => ({
         id:
