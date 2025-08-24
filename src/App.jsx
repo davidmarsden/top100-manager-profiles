@@ -20,67 +20,85 @@ const App = () => {
   }, [managers, searchTerm, selectedDivision, selectedType]);
 
   const fetchManagers = async () => {
-    try {
-      console.log('Fetching managers from /api/managers...');
-      const res = await fetch(`/api/manager?id=${encodeURIComponent(idFromRoute)}`);
-      console.log('Response status:', response.status);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Managers data received:', data);
-      setManagers(data);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching managers:', error);
-      setError(error.message);
-      setLoading(false);
-      
-      // Fallback to sample data if API fails
-      const sampleData = [
-        {
-          id: "scott-mckenzie",
-          name: "Scott McKenzie",
-          club: "FC Barcelona",
-          division: 1,
-          type: "legend",
-          points: 2856,
-          games: 1247,
-          avgPoints: 2.29,
-          signature: "The master tactician who redefined what it means to be a champion",
-          story: "Scott McKenzie's legendary journey in Top 100..."
-        },
-        {
-          id: "glen-mullan",
-          name: "Glen Mullan",
-          club: "Real Madrid",
-          division: 1,
-          type: "elite",
-          points: 2243,
-          games: 987,
-          avgPoints: 2.27,
-          signature: "The tactical perfectionist known for meticulous preparation",
-          story: "Glen Mullan represents the modern era of excellence..."
-        },
-        {
-          id: "david-marsden",
-          name: "David Marsden",
-          club: "Liverpool FC",
-          division: 2,
-          type: "veteran",
-          points: 1876,
-          games: 823,
-          avgPoints: 2.28,
-          signature: "The community builder who transformed Top 100",
-          story: "David Marsden's contribution extends far beyond the pitch..."
-        }
-      ];
-      setManagers(sampleData);
-    }
-  };
+  try {
+    console.log('Fetching managers from /api/managers...');
+    const res = await fetch('/api/managers');               // <-- list endpoint
+    console.log('Response status:', res.status);
 
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+    const data = await res.json();
+    console.log('Managers data received:', data);
+
+    // normalize + safe defaults so UI never breaks
+    const normalized = data.map(m => ({
+      id: m.id || (m.name || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, ''),
+      name: m.name || '',
+      club: m.club || '',
+      division: String(m.division ?? ''),   // treat "1" and 1 the same
+      type: m.type || 'rising',
+      points: Number(m.points || 0),
+      games: Number(m.games || 0),
+      avgPoints: Number(
+        m.avgPoints != null ? m.avgPoints :
+        (m.games ? (Number(m.points || 0) / Number(m.games || 1)) : 0)
+      ),
+      signature: m.signature || '',
+      story: m.story || ''
+    }));
+
+    setManagers(normalized);
+    setError(null);
+  } catch (err) {
+    console.error('Error fetching managers:', err);
+    setError(err.message);
+
+    // Fallback sample data (unchanged)
+    setManagers([
+      {
+        id: "scott-mckenzie",
+        name: "Scott McKenzie",
+        club: "FC Barcelona",
+        division: "1",
+        type: "legend",
+        points: 2856,
+        games: 1247,
+        avgPoints: 2.29,
+        signature: "The master tactician who redefined what it means to be a champion",
+        story: "Scott McKenzie's legendary journey in Top 100..."
+      },
+      {
+        id: "glen-mullan",
+        name: "Glen Mullan",
+        club: "Real Madrid",
+        division: "1",
+        type: "elite",
+        points: 2243,
+        games: 987,
+        avgPoints: 2.27,
+        signature: "The tactical perfectionist known for meticulous preparation",
+        story: "Glen Mullan represents the modern era of excellence..."
+      },
+      {
+        id: "david-marsden",
+        name: "David Marsden",
+        club: "Liverpool FC",
+        division: "2",
+        type: "veteran",
+        points: 1876,
+        games: 823,
+        avgPoints: 2.28,
+        signature: "The community builder who transformed Top 100",
+        story: "David Marsden's contribution extends far beyond the pitch..."
+      }
+    ]);
+  } finally {
+    setLoading(false);
+  }
+};
   const filterManagers = () => {
     let filtered = managers.filter(manager => {
       const matchesSearch = manager.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -610,20 +628,19 @@ const App = () => {
                   </p>
                 )}
 
-                <div style={{ textAlign: 'center' }}>
-                  <span style={{ color: '#ff9a9e', fontWeight: '500' }}>
-                    // before
-// <a href={`/profile/${manager.name}`}>View Profile →</a>
-
-// after
-const slug = (manager.id || manager.name)
-  .toLowerCase()
-  .replace(/[^a-z0-9]+/g,'-')
-  .replace(/^-+|-+$/g,'');
-
-<a href={`/profile/${slug}`}>View Profile →</a>
-                  </span>
-                </div>
+<div style={{ textAlign: 'center' }}>
+  <a
+    style={{ color: '#ff9a9e', fontWeight: '500' }}
+    href={`/profile/${
+      (manager.id || manager.name)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g,'-')
+        .replace(/^-+|-+$/g,'')
+    }`}
+  >
+    View Profile →
+  </a>
+</div>
               </div>
             ))}
           </div>
