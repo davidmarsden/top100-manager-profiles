@@ -7,7 +7,7 @@
   node_bundler = "esbuild"
   external_node_modules = ["googleapis"]
 
-# API → Netlify Functions
+# API → Functions
 [[redirects]]
   from = "/api/managers"
   to = "/.netlify/functions/managers"
@@ -44,20 +44,7 @@
   status = 200
   force = true
 
-# Static pages (optional, if you have these)
-[[redirects]]
-  from = "/admin"
-  to   = "/admin/index.html"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/request"
-  to   = "/public/request/index.html"
-  status = 200
-  force = true
-
-# SPA fallback LAST
+# SPA fallback last
 [[redirects]]
   from = "/*"
   to = "/index.html"
