@@ -5,16 +5,16 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
-  external_node_modules = ["googleapis"]
+  external_node_modules = ["googleapis"]  # ok to keep even if unused
 
-# Map /api/* to Netlify Functions
+# Map /api/* to functions
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
   force = true
 
-# SPA catch-all — MUST be last and NOT forced
+# SPA fallback — must be last and not forced
 [[redirects]]
   from = "/*"
   to = "/index.html"
