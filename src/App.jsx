@@ -1,528 +1,371 @@
-// src/App.jsx
-import React, { useEffect, useMemo, useState } from "react";
-import "./index.css";
+import { useEffect, useMemo, useState } from "react";
 
-/* -------------------------------------------------------
-   Small utilities
---------------------------------------------------------*/
-const API = {
-  // Use the more reliable direct path for this one function.
-  submissions: "/.netlify/functions/profile-request",
-  managers: "/api/managers",
-  manager: (id) => `/api/manager?id=${encodeURIComponent(id)}`
-};
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-async function fetchJSON(url, opts) {
-  const res = await fetch(url, opts);
-  const text = await res.text();
-  try {
-    const data = JSON.parse(text);
-    if (!res.ok) throw new Error(data?.error || data?.message || res.statusText);
-    return data;
-  } catch (e) {
-    // Non-JSON (e.g. HTML error page)
-    throw new Error(`Non-JSON response from ${url} (status ${res.status}): ${text.slice(0, 200)}…`);
-  }
-}
-
-function cls(...xs) {
-  return xs.filter(Boolean).join(" ");
-}
-
-/* -------------------------------------------------------
-   UI atoms
---------------------------------------------------------*/
-function Button({ children, icon, className, ...rest }) {
-  return (
-    <button
-      className={cls(
-        "px-4 py-2 rounded-xl bg-white/80 hover:bg-white shadow-sm border border-white/60",
-        "backdrop-blur text-sm font-medium flex items-center gap-2",
-        className
-      )}
-      {...rest}
-    >
-      {icon ? <span className="opacity-70">{icon}</span> : null}
-      {children}
-    </button>
-  );
-}
-
-function Badge({ children, tone = "neutral" }) {
-  const tones = {
-    neutral: "bg-black/10 text-black/70",
-    warn: "bg-amber-100 text-amber-800",
-    good: "bg-emerald-100 text-emerald-800",
-    bad: "bg-rose-100 text-rose-800",
-    info: "bg-sky-100 text-sky-800",
-  };
-  return (
-    <span className={cls("px-2 py-0.5 rounded-full text-xs font-semibold", tones[tone] || tones.neutral)}>
-      {children}
-    </span>
-  );
-}
-
-function Card({ children, className }) {
-  return (
-    <div className={cls("rounded-2xl bg-white/85 shadow-md border border-white/60 p-4", className)}>
-      {children}
-    </div>
-  );
-}
-
-function ErrorBar({ error, onClose }) {
-  if (!error) return null;
-  return (
-    <div className="max-w-5xl mx-auto mt-4">
-      <div className="rounded-xl px-4 py-3 bg-rose-50 text-rose-800 border border-rose-200 shadow-sm flex justify-between items-start gap-3">
-        <div className="text-sm leading-relaxed">
-          {String(error)}
-        </div>
-        <button className="text-rose-700 text-sm underline" onClick={onClose}>dismiss</button>
-      </div>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------
-   Layout + Header
---------------------------------------------------------*/
-function Shell({ children, right }) {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-200 via-sky-100 to-violet-200">
-      <header className="sticky top-0 z-10 bg-gradient-to-r from-pink-200 to-pink-100/90 border-b border-white/60 backdrop-blur">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <a href="#/" className="font-semibold">⚽ Top 100 Manager Profiles</a>
-          <div className="flex items-center gap-2">
-            <a href="#/request">
-              <Button className="hidden sm:flex">+ Submit Your Profile</Button>
-            </a>
-            {right}
-          </div>
-        </div>
-      </header>
-      <main className="max-w-5xl mx-auto px-4 py-8">{children}</main>
-      <footer className="py-10 text-center text-xs text-black/50">
-        <a className="underline" href="https://smtop100.blog/">Back to smtop100.blog</a>
-      </footer>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------
-   Home (list from /api/managers)
---------------------------------------------------------*/
-function Home() {
-  const [items, setItems] = useState([]);
-  const [err, setErr] = useState("");
-
+/* ----------------------- tiny router (hash-based) ----------------------- */
+function useHashRoute() {
+  const [hash, setHash] = useState(() => window.location.hash.replace(/^#/, "") || "/");
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const data = await fetchJSON(API.managers);
-        if (mounted) setItems(Array.isArray(data) ? data : []);
-      } catch (e) {
-        setErr(e.message || String(e));
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
-
-  return (
-    <Shell
-      right={
-        <a href="#/admin">
-          <Button className="hidden sm:flex" icon={"🛠️"}>Admin</Button>
-        </a>
-      }
-    >
-      <ErrorBar error={err} onClose={() => setErr("")} />
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold mb-1">Celebrating 25 seasons of Soccer Manager Worlds</h1>
-        <div className="flex gap-3">
-          <a href="#/request"><Button icon={"➕"}>Submit Your Profile</Button></a>
-          <a href="#/search"><Button icon={"🔎"}>Search Managers</Button></a>
-        </div>
-      </div>
-
-      {items.length === 0 ? (
-        <Card>No managers yet.</Card>
-      ) : (
-        <div className="grid gap-4">
-          {items.map((m) => (
-            <Card key={m.id} className="flex items-start justify-between">
-              <div>
-                <div className="text-lg font-semibold">{m.name}</div>
-                <div className="text-sm text-black/60">{m.club}</div>
-                <div className="italic text-black/70 mt-2">“{m.signature || "—"}”</div>
-                <div className="mt-3">
-                  <a href={`#/profile/${encodeURIComponent(m.id)}`} className="text-pink-700 font-semibold underline">
-                    View Profile →
-                  </a>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                {m.division ? <Badge>Div {m.division}</Badge> : null}
-                <Badge tone="info">{m.type || "rising"}</Badge>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-    </Shell>
-  );
-}
-
-/* -------------------------------------------------------
-   Request form (unchanged fields; posts to profile-request)
---------------------------------------------------------*/
-function RequestForm() {
-  const [form, setForm] = useState({
-    "Manager Name": "",
-    "Club Name": "",
-    "Division": "",
-    "Favourite Formation": "",
-    "Career Highlights": "",
-    "Tactical Philosophy": "",
-    "Most Memorable Moment": "",
-    "Most Feared Opponent": "",
-    "Future Ambitions": "",
-    "Your Top 100 Story": "",
-  });
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [err, setErr] = useState("");
-
-  function setField(k, v) {
-    setForm((f) => ({ ...f, [k]: v }));
-  }
-
-  async function onSubmit(e) {
-    e.preventDefault();
-    setSaving(true); setErr(""); setMsg("");
-    try {
-      const payload = {
-        "Manager Name": form["Manager Name"],
-        "Club Name": form["Club Name"],
-        "Division": form["Division"],
-        "Favourite Formation": form["Favourite Formation"],
-        "Career Highlights": form["Career Highlights"],
-        "Tactical Philosophy": form["Tactical Philosophy"],
-        "Most Memorable Moment": form["Most Memorable Moment"],
-        "Most Feared Opponent": form["Most Feared Opponent"],
-        "Future Ambitions": form["Future Ambitions"],
-        "Your Top 100 Story": form["Your Top 100 Story"],
-      };
-      const res = await fetchJSON(API.submissions, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      setMsg(`Submitted ✔ (id: ${res.submissionId || "n/a"})`);
-      setForm({
-        "Manager Name": "",
-        "Club Name": "",
-        "Division": "",
-        "Favourite Formation": "",
-        "Career Highlights": "",
-        "Tactical Philosophy": "",
-        "Most Memorable Moment": "",
-        "Most Feared Opponent": "",
-        "Future Ambitions": "",
-        "Your Top 100 Story": "",
-      });
-    } catch (e) {
-      setErr(e.message || String(e));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const Field = ({label, name, type="text", textarea=false, required=false}) => (
-    <div className="mb-4">
-      <label className="block text-sm font-semibold mb-1">{label}{required ? " *" : ""}</label>
-      {textarea ? (
-        <textarea
-          className="w-full rounded-xl border border-black/10 bg-white/80 p-3 min-h-[110px]"
-          value={form[name] || ""}
-          onChange={(e)=>setField(name, e.target.value)}
-        />
-      ) : (
-        <input
-          type={type}
-          className="w-full rounded-xl border border-black/10 bg-white/80 p-3"
-          value={form[name] || ""}
-          onChange={(e)=>setField(name, e.target.value)}
-          required={required}
-        />
-      )}
-    </div>
-  );
-
-  return (
-    <Shell
-      right={<a href="#/"><Button>← Back</Button></a>}
-    >
-      <ErrorBar error={err} onClose={() => setErr("")} />
-      {msg && (
-        <div className="max-w-3xl mx-auto mb-4">
-          <div className="rounded-xl px-4 py-3 bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-sm">{msg}</div>
-        </div>
-      )}
-
-      <Card className="max-w-3xl mx-auto">
-        <h2 className="text-lg font-semibold mb-4">Submit Your Manager Profile</h2>
-        <form onSubmit={onSubmit}>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Manager Name" name="Manager Name" required />
-            <Field label="Club Name" name="Club Name" required />
-            <Field label="Division" name="Division" />
-            <Field label="Favourite Formation" name="Favourite Formation" />
-          </div>
-
-          <Field label="Career Highlights" name="Career Highlights" textarea />
-          <Field label="Tactical Philosophy" name="Tactical Philosophy" textarea />
-          <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Most Memorable Moment" name="Most Memorable Moment" />
-            <Field label="Most Feared Opponent" name="Most Feared Opponent" />
-          </div>
-          <Field label="Future Ambitions" name="Future Ambitions" textarea />
-          <Field label="Your Top 100 Story" name="Your Top 100 Story" textarea />
-
-          <div className="pt-2">
-            <Button type="submit" disabled={saving}>{saving ? "Submitting…" : "Submit Profile"}</Button>
-          </div>
-        </form>
-      </Card>
-    </Shell>
-  );
-}
-
-/* -------------------------------------------------------
-   Admin Panel — Approve / Reject
---------------------------------------------------------*/
-function AdminPanel() {
-  const [subs, setSubs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState("");
-  const [busyId, setBusyId] = useState("");
-
-  async function load() {
-    setErr(""); setLoading(true);
-    try {
-      const data = await fetchJSON(API.submissions);
-      // Expect array of row objects (from your function)
-      const items = Array.isArray(data) ? data : [];
-      // newest first by Timestamp if present
-      items.sort((a,b)=>String(b["Timestamp"]||"").localeCompare(String(a["Timestamp"]||"")));
-      setSubs(items);
-    } catch (e) {
-      setErr(e.message || String(e));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { load(); }, []);
-
-  async function act(submissionId, action) {
-    setBusyId(submissionId);
-    setErr("");
-    try {
-      const res = await fetchJSON(API.submissions, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ action, submissionId })
-      });
-      // small pause so Google Sheets catches up; then refresh
-      await sleep(400);
-      await load();
-      alert(`${action === "approve" ? "Approved" : "Rejected"} ✔`);
-    } catch (e) {
-      setErr(e.message || String(e));
-    } finally {
-      setBusyId("");
-    }
-  }
-
-  return (
-    <Shell right={<a href="#/"><Button>← Back</Button></a>}>
-      <ErrorBar error={err} onClose={() => setErr("")} />
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold mb-1">Admin — Profile Requests</h1>
-        <p className="text-sm text-black/60">Approve or reject submissions. Newest first.</p>
-      </div>
-
-      <Card>
-        {loading ? (
-          <div>Loading…</div>
-        ) : subs.length === 0 ? (
-          <div>No submissions.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="text-left border-b border-black/10">
-                  <th className="py-2 pr-4">When</th>
-                  <th className="py-2 pr-4">Manager</th>
-                  <th className="py-2 pr-4">Club</th>
-                  <th className="py-2 pr-4">Division</th>
-                  <th className="py-2 pr-4">Status</th>
-                  <th className="py-2 pr-4">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {subs.map((r) => {
-                  const id = r["Request ID"];
-                  const status = (r["Status"] || "").toLowerCase();
-                  const when = r["Timestamp"] ? new Date(r["Timestamp"]).toLocaleString() : "";
-                  return (
-                    <tr key={id} className="border-b border-black/5 align-top">
-                      <td className="py-2 pr-4 whitespace-nowrap">{when}</td>
-                      <td className="py-2 pr-4">{r["Manager Name"]}</td>
-                      <td className="py-2 pr-4">{r["Club Name"]}</td>
-                      <td className="py-2 pr-4">{r["Division"]}</td>
-                      <td className="py-2 pr-4">
-                        {status === "approved" ? <Badge tone="good">approved</Badge>
-                          : status === "rejected" ? <Badge tone="bad">rejected</Badge>
-                          : <Badge tone="warn">pending</Badge>}
-                      </td>
-                      <td className="py-2 pr-4">
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={() => act(id, "approve")}
-                            disabled={busyId === id || status === "approved"}
-                            className="bg-emerald-600 text-white hover:bg-emerald-700 border-emerald-700"
-                          >
-                            {busyId === id ? "Working…" : "Approve"}
-                          </Button>
-                          <Button
-                            onClick={() => act(id, "reject")}
-                            disabled={busyId === id || status === "rejected"}
-                            className="bg-rose-600 text-white hover:bg-rose-700 border-rose-700"
-                          >
-                            {busyId === id ? "Working…" : "Reject"}
-                          </Button>
-                        </div>
-                        <div className="text-[11px] text-black/50 mt-1 select-all">{id}</div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
-    </Shell>
-  );
-}
-
-/* -------------------------------------------------------
-   Profile (read-only from /api/manager?id=…)
---------------------------------------------------------*/
-function Profile({ slug }) {
-  const [data, setData] = useState(null);
-  const [err, setErr] = useState("");
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const json = await fetchJSON(API.manager(slug));
-        if (mounted) setData(json);
-      } catch (e) {
-        setErr(e.message || String(e));
-      }
-    })();
-    return () => { mounted = false; };
-  }, [slug]);
-
-  return (
-    <Shell right={<a href="#/"><Button>← Back</Button></a>}>
-      <ErrorBar error={err} onClose={() => setErr("")} />
-      {!data ? (
-        <Card>Loading…</Card>
-      ) : data.error ? (
-        <Card>Error: {data.error}</Card>
-      ) : (
-        <div className="grid gap-4">
-          <Card className="p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-semibold">{data.name}</h1>
-                <div className="text-black/60">{data.club}</div>
-                <div className="mt-2 flex gap-2">
-                  {data.division ? <Badge>Div {data.division}</Badge> : null}
-                  <Badge tone="info">{data.type || "rising"}</Badge>
-                </div>
-              </div>
-            </div>
-            <p className="italic mt-4">“{data.signature || "—"}”</p>
-          </Card>
-
-          <Card>
-            <h2 className="font-semibold mb-2">Story</h2>
-            <div className="whitespace-pre-wrap">{data.story || "—"}</div>
-          </Card>
-
-          <div className="grid sm:grid-cols-2 gap-4">
-            <Card>
-              <h3 className="font-semibold mb-2">Career Highlights</h3>
-              <div className="whitespace-pre-wrap">{data.careerHighlights || "—"}</div>
-            </Card>
-            <Card>
-              <h3 className="font-semibold mb-2">Favourite Formation</h3>
-              <div>{data.favouriteFormation || "—"}</div>
-            </Card>
-            <Card>
-              <h3 className="font-semibold mb-2">Tactical Philosophy</h3>
-              <div className="whitespace-pre-wrap">{data.tacticalPhilosophy || "—"}</div>
-            </Card>
-            <Card>
-              <h3 className="font-semibold mb-2">Most Memorable Moment</h3>
-              <div className="whitespace-pre-wrap">{data.memorableMoment || "—"}</div>
-            </Card>
-            <Card>
-              <h3 className="font-semibold mb-2">Most Feared Opponent</h3>
-              <div>{data.fearedOpponent || "—"}</div>
-            </Card>
-            <Card>
-              <h3 className="font-semibold mb-2">Future Ambitions</h3>
-              <div className="whitespace-pre-wrap">{data.ambitions || "—"}</div>
-            </Card>
-          </div>
-        </div>
-      )}
-    </Shell>
-  );
-}
-
-/* -------------------------------------------------------
-   Very tiny hash-router
---------------------------------------------------------*/
-export default function App() {
-  const [route, setRoute] = useState(() => window.location.hash || "#/");
-
-  useEffect(() => {
-    const onHash = () => setRoute(window.location.hash || "#/");
+    const onHash = () => setHash(window.location.hash.replace(/^#/, "") || "/");
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
-
-  const content = useMemo(() => {
-    if (route.startsWith("#/request")) return <RequestForm />;
-    if (route.startsWith("#/profile/")) {
-      const slug = decodeURIComponent(route.replace("#/profile/", ""));
-      return <Profile slug={slug} />;
-    }
-    if (route.startsWith("#/admin")) return <AdminPanel />;
-    return <Home />;
-  }, [route]);
-
-  return content;
+  const path = hash.split("?")[0];
+  const query = useMemo(() => {
+    const out = {};
+    const [, qs = ""] = hash.split("?");
+    qs.split("&").forEach((kv) => {
+      const [k, v] = kv.split("=");
+      if (k) out[decodeURIComponent(k)] = decodeURIComponent(v || "");
+    });
+    return out;
+  }, [hash]);
+  return { path, query, push: (p) => (window.location.hash = p.startsWith("#") ? p : `#${p}`) };
 }
+
+/* ---------------------------- fetch utilities --------------------------- */
+async function fetchJSON(url, init) {
+  const res = await fetch(url, init);
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  const ct = res.headers.get("content-type") || "";
+  if (!ct.includes("application/json")) {
+    const text = await res.text();
+    throw new Error(`Non-JSON response from ${url} (status ${res.status}): ${text.slice(0, 150)}…`);
+  }
+  return res.json();
+}
+
+/* -------------------------------- Header -------------------------------- */
+function SiteHeader() {
+  return (
+    <header className="sitebar">
+      <div className="container cluster">
+        <a href="#/" className="brand">⚽ Top 100 Manager Profiles</a>
+        <div className="right cluster">
+          <a href="#/request" className="btn primary">+ Submit Your Profile</a>
+          <a href="#/admin" className="btn">🛠️ Admin</a>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* ---------------------------------- Home -------------------------------- */
+function Home() {
+  const [items, setItems] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let on = true;
+    (async () => {
+      try {
+        const data = await fetchJSON("/api/managers");
+        if (on) setItems(Array.isArray(data) ? data : []);
+      } catch (e) {
+        if (on) setError(e.message || "Failed to load managers");
+      }
+    })();
+    return () => (on = false);
+  }, []);
+
+  return (
+    <main className="container stack">
+      <h1 className="m0">Celebrating 25 seasons of Soccer Manager Worlds</h1>
+
+      <div className="cluster">
+        <a href="#/request" className="btn">+ Submit Your Profile</a>
+        <button className="btn">🔎 Search Managers</button>
+      </div>
+
+      {error && <div className="card" style={{ borderLeft: "4px solid var(--err)" }}>{error}</div>}
+
+      {!items && !error && <div className="card">Loading…</div>}
+
+      {items && (
+        items.length ? (
+          <section className="grid">
+            {items.map(m => (
+              <article key={m.id} className="card manager-card">
+                <h3 className="title">{m.name}</h3>
+                <p className="subtitle">{m.club}</p>
+                {m.signature && <p>“{m.signature}”</p>}
+                <div className="footer">
+                  <span className="badge muted">Div {m.division || "–"}</span>
+                  <span className="badge brand">{(m.type || "rising").toLowerCase()}</span>
+                  <a className="btn right" href={`#/manager/${encodeURIComponent(m.id)}`}>View Profile →</a>
+                </div>
+              </article>
+            ))}
+          </section>
+        ) : (
+          <div className="card">No managers yet.</div>
+        )
+      )}
+
+      <div><a href="https://smtop100.blog">Back to smtop100.blog</a></div>
+    </main>
+  );
+}
+
+/* ------------------------------- Profile view --------------------------- */
+function Profile({ id }) {
+  const [mgr, setMgr] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let on = true;
+    (async () => {
+      try {
+        const data = await fetchJSON(`/api/manager?id=${encodeURIComponent(id)}`);
+        if (on) setMgr(data);
+      } catch (e) {
+        if (on) setError(e.message || "Failed to load profile");
+      }
+    })();
+    return () => (on = false);
+  }, [id]);
+
+  if (error) return <main className="container stack"><div className="card">{error}</div></main>;
+  if (!mgr) return <main className="container stack"><div className="card">Loading…</div></main>;
+
+  return (
+    <main className="container stack">
+      <div className="profile-header">
+        <div>
+          <h1 className="profile-name m0">{mgr.name}</h1>
+          <div className="profile-meta">
+            {mgr.club} · Div {mgr.division || "–"} · <span className="badge brand">{mgr.type || "rising"}</span>
+          </div>
+          {mgr.signature && <p className="mt8">“{mgr.signature}”</p>}
+        </div>
+      </div>
+
+      <div className="profile-grid">
+        <div className="card section">
+          <h2>Story</h2>
+          <p>{mgr.story || "—"}</p>
+        </div>
+
+        <div className="stack">
+          <div className="card section">
+            <h2>Career Highlights</h2>
+            <p>{mgr.careerHighlights || "—"}</p>
+          </div>
+          <div className="card section"><h2>Favourite Formation</h2><p>{mgr.favouriteFormation || "—"}</p></div>
+          <div className="card section"><h2>Tactical Philosophy</h2><p>{mgr.tacticalPhilosophy || "—"}</p></div>
+          <div className="card section"><h2>Most Memorable Moment</h2><p>{mgr.memorableMoment || "—"}</p></div>
+          <div className="card section"><h2>Most Feared Opponent</h2><p>{mgr.fearedOpponent || "—"}</p></div>
+          <div className="card section"><h2>Future Ambitions</h2><p>{mgr.ambitions || "—"}</p></div>
+        </div>
+      </div>
+
+      <div className="mt16"><a href="https://smtop100.blog">Back to smtop100.blog</a></div>
+    </main>
+  );
+}
+
+/* ------------------------------- Request form --------------------------- */
+function RequestForm() {
+  const empty = {
+    managerName: "", clubName: "", division: "",
+    favouriteFormation: "", careerHighlights: "",
+    tacticalPhilosophy: "", memorableMoment: "",
+    fearedOpponent: "", ambitions: "", story: "",
+    type: "rising", totalPoints: "", gamesPlayed: "", imageUrl: ""
+  };
+  const [form, setForm] = useState(empty);
+  const [msg, setMsg] = useState("");
+
+  const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    setMsg("");
+    try {
+      const res = await fetchJSON("/api/profile-request", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      setMsg(res.ok ? "Submitted! Awaiting approval." : "Unexpected response");
+      setForm(empty);
+    } catch (err) {
+      setMsg(err.message || "Submission failed");
+    }
+  };
+
+  return (
+    <main className="container stack">
+      <h1 className="m0">Submit Your Manager Profile</h1>
+      {msg && <div className="card">{msg}</div>}
+      <form onSubmit={onSubmit} className="card stack" style={{ padding: 20 }}>
+        <div className="grid" style={{ "--min": "260px" }}>
+          <label className="stack">
+            <strong>Manager Name *</strong>
+            <input name="managerName" value={form.managerName} onChange={onChange} required />
+          </label>
+          <label className="stack">
+            <strong>Club Name *</strong>
+            <input name="clubName" value={form.clubName} onChange={onChange} required />
+          </label>
+          <label className="stack">
+            <strong>Division</strong>
+            <input name="division" value={form.division} onChange={onChange} />
+          </label>
+          <label className="stack">
+            <strong>Favourite Formation</strong>
+            <input name="favouriteFormation" value={form.favouriteFormation} onChange={onChange} />
+          </label>
+        </div>
+
+        <label className="stack">
+          <strong>Career Highlights</strong>
+          <textarea name="careerHighlights" rows="3" value={form.careerHighlights} onChange={onChange} />
+        </label>
+
+        <label className="stack">
+          <strong>Tactical Philosophy</strong>
+          <textarea name="tacticalPhilosophy" rows="5" value={form.tacticalPhilosophy} onChange={onChange} />
+        </label>
+
+        <div className="grid" style={{ "--min": "260px" }}>
+          <label className="stack">
+            <strong>Most Memorable Moment</strong>
+            <input name="memorableMoment" value={form.memorableMoment} onChange={onChange} />
+          </label>
+          <label className="stack">
+            <strong>Most Feared Opponent</strong>
+            <input name="fearedOpponent" value={form.fearedOpponent} onChange={onChange} />
+          </label>
+        </div>
+
+        <label className="stack">
+          <strong>Future Ambitions</strong>
+          <textarea name="ambitions" rows="3" value={form.ambitions} onChange={onChange} />
+        </label>
+
+        <label className="stack">
+          <strong>Your Top 100 Story</strong>
+          <textarea name="story" rows="6" value={form.story} onChange={onChange} />
+        </label>
+
+        <div className="cluster">
+          <button className="btn primary" type="submit">Submit Profile</button>
+          <a href="#/" className="btn">← Back</a>
+        </div>
+      </form>
+    </main>
+  );
+}
+
+/* --------------------------------- Admin -------------------------------- */
+function Admin() {
+  const [rows, setRows] = useState(null);
+  const [err, setErr] = useState("");
+
+  const load = async () => {
+    setErr("");
+    try {
+      const data = await fetchJSON("/api/profile-request");
+      setRows(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setErr(e.message || "Failed to load submissions");
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const act = async (submissionId, action) => {
+    try {
+      await fetchJSON("/api/profile-request", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ submissionId, action }),
+      });
+      await load();
+    } catch (e) {
+      alert(e.message || "Action failed");
+    }
+  };
+
+  return (
+    <main className="container stack">
+      <h1 className="m0">Admin — Profile Requests</h1>
+      {err && <div className="card">{err}</div>}
+      {!rows && !err && <div className="card">Loading…</div>}
+
+      {rows && (
+        rows.length ? (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>When</th><th>Manager</th><th>Club</th><th>Division</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={i}>
+                  <td>{r["Timestamp"]?.replace("T", " ").replace("Z", "") || "—"}</td>
+                  <td>{r["Manager Name"]}</td>
+                  <td>{r["Club Name"]}</td>
+                  <td>{r["Division"]}</td>
+                  <td>{r["Status"] || "pending"}</td>
+                  <td className="cluster">
+                    <button className="btn primary" onClick={() => act(r["Request ID"], "approve")}>Approve</button>
+                    <button className="btn" onClick={() => act(r["Request ID"], "reject")}>Reject</button>
+                    <code style={{ fontSize: "12px" }}>{r["Request ID"]}</code>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="card">No submissions.</div>
+        )
+      )}
+
+      <a href="https://smtop100.blog">Back to smtop100.blog</a>
+    </main>
+  );
+}
+
+/* ---------------------------------- App --------------------------------- */
+export default function App() {
+  const { path } = useHashRoute();
+
+  return (
+    <>
+      <SiteHeader />
+      {path === "/" && <Home />}
+
+      {path.startsWith("/manager/") && (
+        <Profile id={decodeURIComponent(path.split("/").pop() || "")} />
+      )}
+
+      {path === "/request" && <RequestForm />}
+
+      {path === "/admin" && <Admin />}
+
+      {/* Fallback */}
+      {!["/", "/request", "/admin"].some(p => path === p || path.startsWith("/manager/")) && (
+        <main className="container stack">
+          <div className="card">Page not found.</div>
+        </main>
+      )}
+    </>
+  );
+}
+
+/* -------------------------- basic form element styles -------------------- */
+/* If you prefer, move these to index.css, but keeping here is convenient */
+const style = document.createElement("style");
+style.innerHTML = `
+  input, textarea {
+    width: 100%;
+    font: inherit;
+    padding: .65rem .8rem;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+  }
+  textarea { resize: vertical }
+`;
+document.head.appendChild(style);
