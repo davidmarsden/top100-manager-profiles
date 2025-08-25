@@ -7,15 +7,9 @@
   node_bundler = "esbuild"
   external_node_modules = ["googleapis"]
 
-# 1) First: send /api/* to functions
+# Pretty API path → Functions (must be above any other redirects)
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
   force = true
-
-# 2) Last: SPA fallback (do NOT force)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
