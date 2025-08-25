@@ -12,6 +12,32 @@ export default async (req: Request, _context: Context) => {
       range: `${TAB_MANAGERS}!A:Z`
     });
 
+function shapeRow(r: any) {
+  const toSlug = (s: string) =>
+    String(s || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+  const points = Number(r.points || r.totalPoints || 0);
+  const games = Number(r.games || r.totalGames || 0);
+  const avgPoints =
+    r.avgPoints != null ? Number(r.avgPoints) : (games ? points / games : 0);
+
+  return {
+    id: r.id || toSlug(r.name),
+    name: r.name || "",
+    club: r.club || "",
+    division: Number(r.division ?? "") || "",
+    type: String(r.type || "rising").toLowerCase(),
+    points,
+    games,
+    avgPoints,
+    signature: r.signature || "",
+    story: r.story || "",
+  };
+}
+
     const rows = res.data.values || [];
     if (rows.length <= 1) return json(200, []);
     const header = rows[0];
