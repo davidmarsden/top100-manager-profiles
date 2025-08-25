@@ -7,24 +7,20 @@
   node_bundler = "esbuild"
   external_node_modules = ["googleapis"]
 
+# --- API to Functions (put BEFORE the SPA rule) ---
 [[redirects]]
-  from = "/api/managers"
-  to = "/.netlify/functions/managers"
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
   status = 200
   force = true
 
+# Allow direct function URLs to work (defensive)
 [[redirects]]
-  from = "/api/manager"
-  to = "/.netlify/functions/manager"
+  from = "/.netlify/functions/*"
+  to = "/.netlify/functions/:splat"
   status = 200
-  force = true
 
-[[redirects]]
-  from = "/api/profile-request"
-  to = "/.netlify/functions/profile-request"
-  status = 200
-  force = true
-
+# --- SPA catch-all (MUST be last, and NOT forced) ---
 [[redirects]]
   from = "/*"
   to = "/index.html"
