@@ -7,20 +7,14 @@
   node_bundler = "esbuild"
   external_node_modules = ["googleapis"]
 
-# --- API to Functions (put BEFORE the SPA rule) ---
+# Map /api/* to Netlify Functions
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
   force = true
 
-# Allow direct function URLs to work (defensive)
-[[redirects]]
-  from = "/.netlify/functions/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-
-# --- SPA catch-all (MUST be last, and NOT forced) ---
+# SPA catch-all — MUST be last and NOT forced
 [[redirects]]
   from = "/*"
   to = "/index.html"
