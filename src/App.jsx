@@ -1,71 +1,115 @@
 import { useEffect, useMemo, useState } from "react";
 
-/* ----------------------- tiny router (hash-based) ----------------------- */
-function useHashRoute() {
-  const [hash, setHash] = useState(() => window.location.hash.replace(/^#/, "") || "/");
+/* -------------------------------------------------------------------------- */
+/* Utils                                                                      */
+/* -------------------------------------------------------------------------- */
+
+async function fetchJSON(url, opts = {}) {
+  const res = await fetch(url, opts);
+  const txt = await res.text();
+  const isJSON = (res.headers.get("content-type") || "").includes(
+    "application/json"
+  );
+  if (!res.ok) {
+    if (isJSON) {
+      let data;
+      try {
+        data = JSON.parse(txt);
+      } catch {}
+      throw new Error(
+        `Non-OK response from ${url} (${res.status}): ${data?.error || data?.message || txt}`
+      );
+    }
+    throw new Error(
+      `Non-JSON response from ${url} (status ${res.status}): ${txt.slice(
+        0,
+        180
+      )}…`
+    );
+  }
+  return isJSON ? JSON.parse(txt) : txt;
+}
+
+const slugify = (s = "") =>
+  s
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+/* -------------------------------------------------------------------------- */
+/* Tiny Router (hash)                                                         */
+/* -------------------------------------------------------------------------- */
+
+function useRoute() {
+  const [hash, setHash] = useState(() => window.location.hash || "#/");
   useEffect(() => {
-    const onHash = () => setHash(window.location.hash.replace(/^#/, "") || "/");
+    const onHash = () => setHash(window.location.hash || "#/");
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
-  const path = hash.split("?")[0];
-  const query = useMemo(() => {
-    const out = {};
-    const [, qs = ""] = hash.split("?");
-    qs.split("&").forEach((kv) => {
-      const [k, v] = kv.split("=");
-      if (k) out[decodeURIComponent(k)] = decodeURIComponent(v || "");
-    });
-    return out;
-  }, [hash]);
-  return { path, query, push: (p) => (window.location.hash = p.startsWith("#") ? p : `#${p}`) };
+
+  // routes: "/", "/request", "/admin", "/manager/:id"
+  const parts = hash.replace(/^#/, "").split("?")[0].split("/").filter(Boolean);
+  const route =
+    parts.length === 0
+      ? { name: "home" }
+      : parts[0] === "request"
+      ? { name: "request" }
+      : parts[0] === "admin"
+      ? { name: "admin" }
+      : parts[0] === "manager" && parts[1]
+      ? { name: "manager", id: decodeURIComponent(parts[1]) }
+      : { name: "home" };
+
+  return route;
 }
 
-/* ---------------------------- fetch utilities --------------------------- */
-async function fetchJSON(url, init) {
-  const res = await fetch(url, init);
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  const ct = res.headers.get("content-type") || "";
-  if (!ct.includes("application/json")) {
-    const text = await res.text();
-    throw new Error(`Non-JSON response from ${url} (status ${res.status}): ${text.slice(0, 150)}…`);
-  }
-  return res.json();
-}
+/* -------------------------------------------------------------------------- */
+/* Layout                                                                     */
+/* -------------------------------------------------------------------------- */
 
-/* -------------------------------- Header -------------------------------- */
-function SiteHeader() {
+function Header() {
   return (
-    <header className="sitebar">
-      <div className="container cluster">
-        <a href="#/" className="brand">⚽ Top 100 Manager Profiles</a>
-        <div className="right cluster">
-          <a href="#/request" className="btn primary">+ Submit Your Profile</a>
-          <a href="#/admin" className="btn">🛠️ Admin</a>
-        </div>
+    <header className="site-header">
+      <a className="brand" href="#/">
+        <span role="img" aria-label="ball">
+          ⚽
+        </span>{" "}
+        Top 100 Manager Profiles
+      </a>
+      <div className="header-actions">
+        <a className="btn primary" href="#/request">
+          + Submit Your Profile
+        </a>
+        <a className="btn" href="#/admin">
+          🛠️ Admin
+        </a>
       </div>
+      <hr className="divider" />
     </header>
   );
 }
 
-/* ---------------------------------- Home -------------------------------- */
-/* ---------------------------------- Home -------------------------------- */
-function Home() {
-  const [items, setItems] = useState(null);
-  const [error, setError] = useState("");
+function Container({ children }) {
+  return <main className="container">{children}</main>;
+}
 
-  // search UI state
-  const [open, setOpen] = useState(false);
+/* -------------------------------------------------------------------------- */
+/* Home                                                                       */
+/* -------------------------------------------------------------------------- */
+
+function Home() {
+  const [data, setData] = useState([]);
   const [q, setQ] = useState("");
-  const [div, setDiv] = useState("");
-  const [type, setType] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let on = true;
     (async () => {
       try {
-        const data = await fetchJSON("/api/managers");
-        if (on) setItems(Array.isArray(data) ? data : []);
+        const list = await fetchJSON("/api/managers");
+        if (on) setData(Array.isArray(list) ? list : []);
       } catch (e) {
         if (on) setError(e.message || "Failed to load managers");
       }
@@ -73,113 +117,102 @@ function Home() {
     return () => (on = false);
   }, []);
 
-  // computed filtered list
   const filtered = useMemo(() => {
-    if (!Array.isArray(items)) return [];
     const term = q.trim().toLowerCase();
-    return items.filter((m) => {
-      const matchesText =
-        !term ||
-        [m.name, m.club, m.signature, m.story]
-          .filter(Boolean)
-          .some((v) => String(v).toLowerCase().includes(term));
-      const matchesDiv = !div || String(m.division || "").toLowerCase() === div.toLowerCase();
-      const matchesType = !type || String(m.type || "").toLowerCase() === type.toLowerCase();
-      return matchesText && matchesDiv && matchesType;
+    if (!term) return data;
+    return data.filter((m) => {
+      const hay =
+        `${m.name} ${m.club} ${m.division} ${m.signature} ${m.type}`
+          .toLowerCase()
+          .replace(/\s+/g, " ");
+      return hay.includes(term);
     });
-  }, [items, q, div, type]);
-
-  const clearFilters = () => {
-    setQ("");
-    setDiv("");
-    setType("");
-  };
+  }, [data, q]);
 
   return (
-    <main className="container stack">
-      <h1 className="m0">Celebrating 25 seasons of Soccer Manager Worlds</h1>
-
-      <div className="cluster">
-        <a href="#/request" className="btn">+ Submit Your Profile</a>
-        <button className="btn" onClick={() => setOpen((v) => !v)}>
-          {open ? "✖ Close Search" : "🔎 Search Managers"}
-        </button>
-      </div>
-
-      {/* Search panel */}
-      {open && (
-        <div className="card search-panel">
-          <div className="grid" style={{ "--min": "220px" }}>
-            <label className="stack">
-              <strong>Search</strong>
-              <input
-                placeholder="Name, club, quote, story…"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-              />
-            </label>
-
-            <label className="stack">
-              <strong>Division</strong>
-              <input
-                placeholder="e.g. 1"
-                value={div}
-                onChange={(e) => setDiv(e.target.value)}
-              />
-            </label>
-
-            <label className="stack">
-              <strong>Type</strong>
-              <select value={type} onChange={(e) => setType(e.target.value)}>
-                <option value="">Any</option>
-                <option value="rising">rising</option>
-                <option value="legend">legend</option>
-                <option value="hall-of-fame">hall-of-fame</option>
-              </select>
-            </label>
-          </div>
-
-          <div className="cluster" style={{ justifyContent: "space-between" }}>
-            <span className="muted">
-              Showing {filtered.length}
-              {items ? ` of ${items.length}` : ""} result{filtered.length === 1 ? "" : "s"}
-            </span>
-            <button className="btn" onClick={clearFilters}>Reset</button>
-          </div>
+    <Container>
+      {error && (
+        <div className="alert">
+          {error}{" "}
+          <button className="link" onClick={() => setError("")}>
+            dismiss
+          </button>
         </div>
       )}
 
-      {error && <div className="card" style={{ borderLeft: "4px solid var(--err)" }}>{error}</div>}
-      {!items && !error && <div className="card">Loading…</div>}
+      <h1 className="page-title">
+        Celebrating 25 seasons of Soccer Manager Worlds
+      </h1>
 
-      {items && (
-        filtered.length ? (
-          <section className="grid">
-            {filtered.map((m) => (
-              <article key={m.id} className="card manager-card">
-                <h3 className="title">{m.name}</h3>
-                <p className="subtitle">{m.club}</p>
-                {m.signature && <p>“{m.signature}”</p>}
-                <div className="footer">
-                  <span className="badge muted">Div {m.division || "–"}</span>
-                  <span className="badge brand">{(m.type || "rising").toLowerCase()}</span>
-                  <a className="btn right" href={`#/manager/${encodeURIComponent(m.id)}`}>View Profile →</a>
-                </div>
-              </article>
-            ))}
-          </section>
+      <div className="home-actions">
+        <a className="btn" href="#/request">
+          + Submit Your Profile
+        </a>
+
+        <div className="search">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search by manager, club, division, type…"
+            aria-label="Search managers"
+          />
+          <button className="btn" onClick={() => setQ((s) => s.trim())}>
+            🔎 Search
+          </button>
+        </div>
+      </div>
+
+      <section className="list">
+        {filtered.length === 0 ? (
+          <div className="card">No managers yet.</div>
         ) : (
-          <div className="card">No matches. Try changing your search or filters.</div>
-        )
-      )}
+          filtered.map((m) => <ManagerSummaryCard key={m.id} m={m} />)
+        )}
+      </section>
 
-      <div><a href="https://smtop100.blog">Back to smtop100.blog</a></div>
-    </main>
+      <p className="backlink">
+        <a href="https://smtop100.blog">Back to smtop100.blog</a>
+      </p>
+    </Container>
   );
 }
 
-/* ------------------------------- Profile view --------------------------- */
-function Profile({ id }) {
+/* Summary Card */
+function ManagerSummaryCard({ m }) {
+  return (
+    <article className="card pro-card">
+      <div className="pro-left">
+        <Avatar name={m.name} imageUrl={m.imageUrl} />
+      </div>
+      <div className="pro-main">
+        <h3 className="title">{m.name}</h3>
+        <div className="subtle">{m.club}</div>
+        {m.signature && <p className="sig">“{m.signature}”</p>}
+
+        <div className="mini-facts">
+          <span className="badge muted">Div {m.division || "–"}</span>
+          <span className="badge">{(m.type || "rising").toLowerCase()}</span>
+          {m.games ? <span className="chip">{m.games} games</span> : null}
+          {m.points ? <span className="chip">{m.points} pts</span> : null}
+          {(m.avgPoints ?? "") !== "" ? (
+            <span className="chip">{Number(m.avgPoints).toFixed(2)} avg</span>
+          ) : null}
+        </div>
+      </div>
+      <div className="pro-actions">
+        <a className="btn" href={`#/manager/${encodeURIComponent(m.id)}`}>
+          View Profile →
+        </a>
+      </div>
+    </article>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Manager Detail                                                              */
+/* -------------------------------------------------------------------------- */
+
+function ManagerPage({ id }) {
   const [mgr, setMgr] = useState(null);
   const [error, setError] = useState("");
 
@@ -187,69 +220,162 @@ function Profile({ id }) {
     let on = true;
     (async () => {
       try {
-        const data = await fetchJSON(`/api/manager?id=${encodeURIComponent(id)}`);
-        if (on) setMgr(data);
+        const data = await fetchJSON(
+          `/api/manager?id=${encodeURIComponent(id)}`
+        );
+        if (on) {
+          if (data && !data.error) setMgr(data);
+          else setError(data?.error || "Not found");
+        }
       } catch (e) {
-        if (on) setError(e.message || "Failed to load profile");
+        if (on) setError(e.message || "Failed to load manager");
       }
     })();
     return () => (on = false);
   }, [id]);
 
-  if (error) return <main className="container stack"><div className="card">{error}</div></main>;
-  if (!mgr) return <main className="container stack"><div className="card">Loading…</div></main>;
+  if (error) {
+    return (
+      <Container>
+        <div className="card">{error}</div>
+      </Container>
+    );
+  }
+  if (!mgr) {
+    return (
+      <Container>
+        <div className="card">Loading…</div>
+      </Container>
+    );
+  }
+
+  const {
+    name,
+    club,
+    division,
+    type,
+    imageUrl,
+    signature,
+    points,
+    games,
+    avgPoints,
+    favouriteFormation,
+    careerHighlights,
+    tacticalPhilosophy,
+    memorableMoment,
+    fearedOpponent,
+    ambitions,
+    story,
+  } = mgr;
 
   return (
-    <main className="container stack">
-      <div className="profile-header">
-        <div>
-          <h1 className="profile-name m0">{mgr.name}</h1>
-          <div className="profile-meta">
-            {mgr.club} · Div {mgr.division || "–"} · <span className="badge brand">{mgr.type || "rising"}</span>
+    <Container>
+      {/* Hero */}
+      <header className="manager-hero card">
+        <div className="hero-media">
+          <Avatar name={name} imageUrl={imageUrl} />
+        </div>
+        <div className="hero-meta">
+          <h1 className="hero-name">{name}</h1>
+          <div className="hero-sub">
+            <span className="subtle">{club}</span>
+            <span className="dot">•</span>
+            <span className="badge muted">Div {division || "–"}</span>
+            <span className="badge brand">{(type || "rising").toLowerCase()}</span>
           </div>
-          {mgr.signature && <p className="mt8">“{mgr.signature}”</p>}
+          {signature && <p className="hero-quote">“{signature}”</p>}
         </div>
-      </div>
+      </header>
 
-      <div className="profile-grid">
-        <div className="card section">
-          <h2>Story</h2>
-          <p>{mgr.story || "—"}</p>
-        </div>
+      {/* Fact grid */}
+      <section className="fact-grid card">
+        <Fact label="Club" value={club} />
+        <Fact label="Division" value={division || "–"} />
+        <Fact label="Games" value={games || "–"} />
+        <Fact label="Points" value={points || "–"} />
+        <Fact
+          label="Avg Pts"
+          value={(avgPoints ?? "") !== "" ? Number(avgPoints).toFixed(2) : "–"}
+        />
+        <Fact label="Formation" value={favouriteFormation || "–"} />
+        <Fact label="Type" value={(type || "rising").toLowerCase()} />
+      </section>
 
-        <div className="stack">
-          <div className="card section">
-            <h2>Career Highlights</h2>
-            <p>{mgr.careerHighlights || "—"}</p>
-          </div>
-          <div className="card section"><h2>Favourite Formation</h2><p>{mgr.favouriteFormation || "—"}</p></div>
-          <div className="card section"><h2>Tactical Philosophy</h2><p>{mgr.tacticalPhilosophy || "—"}</p></div>
-          <div className="card section"><h2>Most Memorable Moment</h2><p>{mgr.memorableMoment || "—"}</p></div>
-          <div className="card section"><h2>Most Feared Opponent</h2><p>{mgr.fearedOpponent || "—"}</p></div>
-          <div className="card section"><h2>Future Ambitions</h2><p>{mgr.ambitions || "—"}</p></div>
-        </div>
-      </div>
+      {/* Content grid */}
+      <section className="content-grid">
+        <CardBlock title="Career Highlights" body={careerHighlights} />
+        <CardBlock title="Tactical Philosophy" body={tacticalPhilosophy} />
+        <CardBlock title="Most Memorable Moment" body={memorableMoment} />
+        <CardBlock title="Most Feared Opponent" body={fearedOpponent} />
+        <CardBlock title="Future Ambitions" body={ambitions} />
+        <CardBlock title="Story" body={story} span={2} />
+      </section>
 
-      <div className="mt16"><a href="https://smtop100.blog">Back to smtop100.blog</a></div>
-    </main>
+      <nav className="footer-nav">
+        <a href="https://smtop100.blog">Back to smtop100.blog</a>
+      </nav>
+    </Container>
   );
 }
 
-/* ------------------------------- Request form --------------------------- */
-function RequestForm() {
-  const empty = {
-    managerName: "", clubName: "", division: "",
-    favouriteFormation: "", careerHighlights: "",
-    tacticalPhilosophy: "", memorableMoment: "",
-    fearedOpponent: "", ambitions: "", story: "",
-    type: "rising", totalPoints: "", gamesPlayed: "", imageUrl: ""
-  };
-  const [form, setForm] = useState(empty);
+function Fact({ label, value }) {
+  return (
+    <div className="fact">
+      <div className="fact-label">{label}</div>
+      <div className="fact-value">{value || "—"}</div>
+    </div>
+  );
+}
+
+function CardBlock({ title, body, span = 1 }) {
+  if (!body) return null;
+  return (
+    <article className={`card block span-${span}`}>
+      <h3 className="block-title">{title}</h3>
+      <p className="block-body">{body}</p>
+    </article>
+  );
+}
+
+function Avatar({ name, imageUrl }) {
+  const initials = (name || "?")
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase() || "")
+    .join("");
+  return imageUrl ? (
+    <img className="avatar" src={imageUrl} alt={`${name} portrait`} />
+  ) : (
+    <div className="avatar avatar-fallback" aria-label={`${name} initials`}>
+      {initials || "?"}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Submit (Profile Request)                                                   */
+/* -------------------------------------------------------------------------- */
+
+function SubmitPage() {
+  const [form, setForm] = useState({
+    managerName: "",
+    clubName: "",
+    division: "",
+    favouriteFormation: "",
+    careerHighlights: "",
+    tacticalPhilosophy: "",
+    memorableMoment: "",
+    fearedOpponent: "",
+    ambitions: "",
+    story: "",
+    type: "rising",
+    imageUrl: "",
+    gamesPlayed: "",
+    totalPoints: "",
+  });
   const [msg, setMsg] = useState("");
 
-  const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
-
-  const onSubmit = async (e) => {
+  async function onSubmit(e) {
     e.preventDefault();
     setMsg("");
     try {
@@ -258,187 +384,235 @@ function RequestForm() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(form),
       });
-      setMsg(res.ok ? "Submitted! Awaiting approval." : "Unexpected response");
-      setForm(empty);
+      setMsg(res?.ok ? "Thanks! Your profile was submitted." : "Unexpected response");
     } catch (err) {
-      setMsg(err.message || "Submission failed");
+      setMsg(err.message || "Failed to submit");
     }
-  };
+  }
 
   return (
-    <main className="container stack">
-      <h1 className="m0">Submit Your Manager Profile</h1>
-      {msg && <div className="card">{msg}</div>}
-      <form onSubmit={onSubmit} className="card stack" style={{ padding: 20 }}>
-        <div className="grid" style={{ "--min": "260px" }}>
-          <label className="stack">
-            <strong>Manager Name *</strong>
-            <input name="managerName" value={form.managerName} onChange={onChange} required />
-          </label>
-          <label className="stack">
-            <strong>Club Name *</strong>
-            <input name="clubName" value={form.clubName} onChange={onChange} required />
-          </label>
-          <label className="stack">
-            <strong>Division</strong>
-            <input name="division" value={form.division} onChange={onChange} />
-          </label>
-          <label className="stack">
-            <strong>Favourite Formation</strong>
-            <input name="favouriteFormation" value={form.favouriteFormation} onChange={onChange} />
-          </label>
-        </div>
+    <Container>
+      <h1 className="page-title">Submit Your Manager Profile</h1>
+      {msg && <div className="alert">{msg}</div>}
+      <form className="card form" onSubmit={onSubmit}>
+        <Row>
+          <Field
+            label="Manager Name *"
+            required
+            value={form.managerName}
+            onChange={(v) => setForm({ ...form, managerName: v })}
+          />
+          <Field
+            label="Club Name *"
+            required
+            value={form.clubName}
+            onChange={(v) => setForm({ ...form, clubName: v })}
+          />
+          <Field
+            label="Division"
+            value={form.division}
+            onChange={(v) => setForm({ ...form, division: v })}
+          />
+        </Row>
 
-        <label className="stack">
-          <strong>Career Highlights</strong>
-          <textarea name="careerHighlights" rows="3" value={form.careerHighlights} onChange={onChange} />
-        </label>
+        <Row>
+          <Field
+            label="Favourite Formation"
+            value={form.favouriteFormation}
+            onChange={(v) => setForm({ ...form, favouriteFormation: v })}
+          />
+          <Field
+            label="Type (e.g. rising, legend)"
+            value={form.type}
+            onChange={(v) => setForm({ ...form, type: v })}
+          />
+          <Field
+            label="Image URL"
+            value={form.imageUrl}
+            onChange={(v) => setForm({ ...form, imageUrl: v })}
+          />
+        </Row>
 
-        <label className="stack">
-          <strong>Tactical Philosophy</strong>
-          <textarea name="tacticalPhilosophy" rows="5" value={form.tacticalPhilosophy} onChange={onChange} />
-        </label>
+        <Row>
+          <Field
+            label="Games Played"
+            value={form.gamesPlayed}
+            onChange={(v) => setForm({ ...form, gamesPlayed: v })}
+          />
+          <Field
+            label="Total Points"
+            value={form.totalPoints}
+            onChange={(v) => setForm({ ...form, totalPoints: v })}
+          />
+        </Row>
 
-        <div className="grid" style={{ "--min": "260px" }}>
-          <label className="stack">
-            <strong>Most Memorable Moment</strong>
-            <input name="memorableMoment" value={form.memorableMoment} onChange={onChange} />
-          </label>
-          <label className="stack">
-            <strong>Most Feared Opponent</strong>
-            <input name="fearedOpponent" value={form.fearedOpponent} onChange={onChange} />
-          </label>
-        </div>
+        <TextArea
+          label="Career Highlights"
+          value={form.careerHighlights}
+          onChange={(v) => setForm({ ...form, careerHighlights: v })}
+        />
+        <TextArea
+          label="Tactical Philosophy"
+          value={form.tacticalPhilosophy}
+          onChange={(v) => setForm({ ...form, tacticalPhilosophy: v })}
+        />
+        <TextArea
+          label="Most Memorable Moment"
+          value={form.memorableMoment}
+          onChange={(v) => setForm({ ...form, memorableMoment: v })}
+        />
+        <TextArea
+          label="Most Feared Opponent"
+          value={form.fearedOpponent}
+          onChange={(v) => setForm({ ...form, fearedOpponent: v })}
+        />
+        <TextArea
+          label="Future Ambitions"
+          value={form.ambitions}
+          onChange={(v) => setForm({ ...form, ambitions: v })}
+        />
+        <TextArea
+          label="Your Top 100 Story"
+          value={form.story}
+          onChange={(v) => setForm({ ...form, story: v })}
+        />
 
-        <label className="stack">
-          <strong>Future Ambitions</strong>
-          <textarea name="ambitions" rows="3" value={form.ambitions} onChange={onChange} />
-        </label>
-
-        <label className="stack">
-          <strong>Your Top 100 Story</strong>
-          <textarea name="story" rows="6" value={form.story} onChange={onChange} />
-        </label>
-
-        <div className="cluster">
-          <button className="btn primary" type="submit">Submit Profile</button>
-          <a href="#/" className="btn">← Back</a>
+        <div className="form-actions">
+          <button className="btn primary" type="submit">
+            Submit Profile
+          </button>
+          <a className="btn" href="#/">
+            ← Back
+          </a>
         </div>
       </form>
-    </main>
+    </Container>
   );
 }
 
-/* --------------------------------- Admin -------------------------------- */
-function Admin() {
-  const [rows, setRows] = useState(null);
-  const [err, setErr] = useState("");
+function Row({ children }) {
+  return <div className="row">{children}</div>;
+}
+function Field({ label, value, onChange, required }) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <input
+        required={!!required}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </label>
+  );
+}
+function TextArea({ label, value, onChange }) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <textarea value={value} onChange={(e) => onChange(e.target.value)} />
+    </label>
+  );
+}
 
-  const load = async () => {
-    setErr("");
+/* -------------------------------------------------------------------------- */
+/* Admin                                                                      */
+/* -------------------------------------------------------------------------- */
+
+function AdminPage() {
+  const [subs, setSubs] = useState([]);
+  const [error, setError] = useState("");
+
+  async function refresh() {
     try {
-      const data = await fetchJSON("/api/profile-request");
-      setRows(Array.isArray(data) ? data : []);
+      const list = await fetchJSON("/api/profile-request");
+      setSubs(Array.isArray(list) ? list : []);
     } catch (e) {
-      setErr(e.message || "Failed to load submissions");
+      setError(e.message || "Failed to load submissions");
     }
-  };
+  }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    refresh();
+  }, []);
 
-  const act = async (submissionId, action) => {
+  async function act(submissionId, action) {
     try {
       await fetchJSON("/api/profile-request", {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ submissionId, action }),
       });
-      await load();
+      await refresh();
     } catch (e) {
       alert(e.message || "Action failed");
     }
-  };
-
-  return (
-    <main className="container stack">
-      <h1 className="m0">Admin — Profile Requests</h1>
-      {err && <div className="card">{err}</div>}
-      {!rows && !err && <div className="card">Loading…</div>}
-
-      {rows && (
-        rows.length ? (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>When</th><th>Manager</th><th>Club</th><th>Division</th><th>Status</th><th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r, i) => (
-                <tr key={i}>
-                  <td>{r["Timestamp"]?.replace("T", " ").replace("Z", "") || "—"}</td>
-                  <td>{r["Manager Name"]}</td>
-                  <td>{r["Club Name"]}</td>
-                  <td>{r["Division"]}</td>
-                  <td>{r["Status"] || "pending"}</td>
-                  <td className="cluster">
-                    <button className="btn primary" onClick={() => act(r["Request ID"], "approve")}>Approve</button>
-                    <button className="btn" onClick={() => act(r["Request ID"], "reject")}>Reject</button>
-                    <code style={{ fontSize: "12px" }}>{r["Request ID"]}</code>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <div className="card">No submissions.</div>
-        )
-      )}
-
-      <a href="https://smtop100.blog">Back to smtop100.blog</a>
-    </main>
-  );
-}
-
-/* ---------------------------------- App --------------------------------- */
-export default function App() {
-  const { path } = useHashRoute();
-
-  return (
-    <>
-      <SiteHeader />
-      {path === "/" && <Home />}
-
-      {path.startsWith("/manager/") && (
-        <Profile id={decodeURIComponent(path.split("/").pop() || "")} />
-      )}
-
-      {path === "/request" && <RequestForm />}
-
-      {path === "/admin" && <Admin />}
-
-      {/* Fallback */}
-      {!["/", "/request", "/admin"].some(p => path === p || path.startsWith("/manager/")) && (
-        <main className="container stack">
-          <div className="card">Page not found.</div>
-        </main>
-      )}
-    </>
-  );
-}
-
-/* -------------------------- basic form element styles -------------------- */
-/* If you prefer, move these to index.css, but keeping here is convenient */
-const style = document.createElement("style");
-style.innerHTML = `
-  input, textarea {
-    width: 100%;
-    font: inherit;
-    padding: .65rem .8rem;
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    background: #fff;
   }
-  textarea { resize: vertical }
-`;
-document.head.appendChild(style);
+
+  return (
+    <Container>
+      <h1 className="page-title">Admin — Profile Requests</h1>
+      {error && <div className="alert">{error}</div>}
+
+      <section className="admin-list">
+        {subs.length === 0 ? (
+          <div className="card">No submissions.</div>
+        ) : (
+          subs.map((s) => (
+            <article key={s["Request ID"]} className="card pro-card">
+              <div className="pro-main">
+                <div className="title-row">
+                  <strong>{s["Manager Name"]}</strong>{" "}
+                  <span className="subtle">{s["Club Name"]}</span>
+                </div>
+                <div className="mini-facts">
+                  <span className="chip">{s["Timestamp"]}</span>
+                  <span className="badge muted">Div {s["Division"] || "–"}</span>
+                  <span className="chip">{s["Request ID"]}</span>
+                  <span className="badge">
+                    {(s["Status"] || "pending").toLowerCase()}
+                  </span>
+                </div>
+              </div>
+              <div className="pro-actions">
+                <button
+                  className="btn primary"
+                  onClick={() => act(s["Request ID"], "approve")}
+                >
+                  Approve
+                </button>
+                <button
+                  className="btn"
+                  onClick={() => act(s["Request ID"], "reject")}
+                >
+                  Reject
+                </button>
+              </div>
+            </article>
+          ))
+        )}
+      </section>
+
+      <p className="backlink">
+        <a href="https://smtop100.blog">Back to smtop100.blog</a>
+      </p>
+    </Container>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* App                                                                         */
+/* -------------------------------------------------------------------------- */
+
+export default function App() {
+  const route = useRoute();
+
+  return (
+    <div className="app">
+      <Header />
+      {route.name === "home" && <Home />}
+      {route.name === "request" && <SubmitPage />}
+      {route.name === "admin" && <AdminPage />}
+      {route.name === "manager" && <ManagerPage id={route.id} />}
+    </div>
+  );
+}
