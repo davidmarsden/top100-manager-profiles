@@ -1,72 +1,90 @@
-// Shared helper for Google Sheets access and JSON/CORS utilities
+// netlify/functions/_sheets.mts
 import { google } from "googleapis";
 
-export const SHEET_ID = process.env.GOOGLE_SHEET_ID;
-export const TAB_SUBMISSIONS = "Submissions";
-export const TAB_MANAGERS = "Managers";
+const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
+const SHEET_ID = process.env.GOOGLE_SHEET_ID!;
+if (!SHEET_ID) throw new Error("GOOGLE_SHEET_ID missing");
 
-// EXACT header order we’ll write to Managers (include extended fields)
-export const MANAGER_COLUMNS = [
-  "id","name","club","division","signature","story",
-  "careerHighlights","favouriteFormation","tacticalPhilosophy",
-  "memorableMoment","fearedOpponent","ambitions",
-  "type","points","games","avgPoints"
+export const SUBMISSIONS_HEADERS = [
+  "Timestamp","Request ID","Manager Name","Club Name","Division","Type",
+  "Total Points","Games Played","Career Highlights","Favourite Formation",
+  "Tactical Philosophy","Most Memorable Moment","Most Feared Opponent",
+  "Future Ambitions","Story","Status","Image URL",
 ];
 
-export const SUBMISSION_COLUMNS = [
-  "Timestamp","Request ID","Manager Name","Club Name","Division",
-  "Career Highlights","Favourite Formation","Tactical Philosophy",
-  "Most Memorable Moment","Most Feared Opponent","Future Ambitions",
-  "Story","Status"
+export const MANAGERS_HEADERS = [
+  "id","name","club","division","signature","story","careerHighlights",
+  "favouriteFormation","tacticalPhilosophy","memorableMoment",
+  "fearedOpponent","ambitions","type","points","games","avgPoints",
 ];
 
-export function corsHeaders() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization"
-  };
+const norm = (s:string) =>
+  s.trim().toLowerCase().replace(/\s+/g," ").replace(/[^a-z0-9 ]/g,"").replace(/ +/g,"_");
+
+async function getSheets() {
+  const auth = new google.auth.GoogleAuth({ credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT!), scopes: SCOPES });
+  const client = await auth.getClient();
+  return google.sheets({ version: "v4", auth: client });
 }
 
-export function json(status, body) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json", ...corsHeaders() }
+export async function ensureHeaders(sheetName:string, headers:string[]) {
+  const sheets = await getSheets();
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: `${sheetName}!1:1` });
+  const row = (res.data.values?.[0] ?? []) as string[];
+
+  const equal =
+    row.length === headers.length &&
+    row.every((v, i) => v?.trim() === headers[i]);
+
+  if (!equal) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `${sheetName}!1:1`,
+      valueInputOption: "RAW",
+      requestBody: { values: [headers] },
+    });
+  }
+}
+
+export async function readObjects(sheetName:string) {
+  const sheets = await getSheets();
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: `${sheetName}` });
+  const values = res.data.values ?? [];
+  if (values.length === 0) return [];
+  const headers = values[0].map(String);
+  const mapIdx: Record<string, number> = {};
+  headers.forEach((h, i) => (mapIdx[norm(h)] = i));
+
+  return values.slice(1).filter(r => r.some(c => c !== "" && c != null)).map(row => {
+    const obj: Record<string, string> = {};
+    headers.forEach((h, i) => (obj[h] = (row[i] ?? "").toString()));
+    return obj;
   });
 }
 
-export function ok() {
-  return new Response(null, { status: 200, headers: corsHeaders() });
+// Append using a header row (creates empty cells for missing keys)
+export async function appendObject(sheetName:string, obj:Record<string, any>, headers:string[]) {
+  const sheets = await getSheets();
+  const row = headers.map(h => obj[h] ?? "");
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: `${sheetName}`,
+    valueInputOption: "RAW",
+    insertDataOption: "INSERT_ROWS",
+    requestBody: { values: [row] },
+  });
 }
 
-export function toRow(obj, cols) {
-  return cols.map((c) => obj[c] ?? "");
-}
-
-export function mapRow(header, row) {
-  const o = {};
-  for (let i = 0; i < header.length; i++) o[header[i]] = row[i] ?? "";
-  return o;
-}
-
-export function colLetters(zeroIdx) {
-  let s = "", x = zeroIdx + 1;
-  while (x > 0) { const m = (x - 1) % 26; s = String.fromCharCode(65 + m) + s; x = Math.floor((x - 1) / 26); }
-  return s;
-}
-
-export async function getSheets() {
-  // GOOGLE_SERVICE_ACCOUNT can be plain JSON or base64-encoded JSON
-  const raw = process.env.GOOGLE_SERVICE_ACCOUNT || "";
-  const creds = raw.trim().startsWith("{")
-    ? JSON.parse(raw)
-    : JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
-
-  const jwt = new google.auth.JWT(
-    creds.client_email,
-    undefined,
-    creds.private_key,
-    ["https://www.googleapis.com/auth/spreadsheets"]
-  );
-  return google.sheets({ version: "v4", auth: jwt });
-}
+// Overwrite a Managers row by id
+export async function upsertManagerById(id:string, record:Record<string, any>) {
+  const sheets = await getSheets();
+  // read all to find index
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: `Managers` });
+  const values = res.data.values ?? [];
+  let rowIndex = -1;
+  if (values.length > 1) {
+    for (let i = 1; i < values.length; i++) {
+      if ((values[i][0] ?? "") === id) { rowIndex = i; break; }
+    }
+  }
+  const row = MANAGERS_HEADERS.map(h => record[h] ?? "");
