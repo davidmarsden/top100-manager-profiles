@@ -1,5 +1,28 @@
 import React, { useEffect, useMemo, useState } from "react";
 
+const fetchJSON = async (url, init) => {
+  const res = await fetch(url, init);
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`Non-JSON response from ${url}: ${text.slice(0,150)}…`);
+  }
+};
+
+// list
+const list = await fetchJSON("/api/managers");
+
+// single
+const m = await fetchJSON(`/api/manager?id=${encodeURIComponent(slug)}`);
+
+// submit
+await fetchJSON("/api/profile-request", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", Accept: "application/json" },
+  body: JSON.stringify(payload),
+});
+
 /* -------------------- Utilities -------------------- */
 const slugify = (s) =>
   String(s || "")
