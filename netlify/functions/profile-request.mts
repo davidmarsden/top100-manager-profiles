@@ -205,23 +205,23 @@ export default async (req: Request): Promise<Response> => {
       // approve → upsert into Managers
       await ensureHeaders(sheets, SHEET_ID, TAB_MANAGERS, MANAGERS_HEADERS);
       const record = {
-        id: slugify(sub["Manager Name"] || ""),
-        name: sub["Manager Name"] || "",
-        club: sub["Club Name"] || "",
-        division: sub["Division"] || "",
-        type: (sub["Type"] || "rising").toLowerCase(),
-        points: sub["Total Points"] || "",
-        games: sub["Games Played"] || "",
-        signature: sub["Most Memorable Moment"] || sub["Career Highlights"] || "",
-        careerHighlights: sub["Career Highlights"] || "",
-        favouriteFormation: sub["Favourite Formation"] || "",
-        tacticalPhilosophy: sub["Tactical Philosophy"] || "",
-        memorableMoment: sub["Most Memorable Moment"] || "",
-        fearedOpponent: sub["Most Feared Opponent"] || "",
-        ambitions: sub["Future Ambitions"] || "",
-        story: sub["Story"] || "",
-        avgPoints: "", // optional
-      };
+  id: slugify(sub["Manager Name"] || ""),
+  name: sub["Manager Name"] || "",
+  club: sub["Club Name"] || "",
+  division: sub["Division"] || "",
+  type: (sub["Type"] || "rising").toLowerCase(),
+  points: sub["Total Points"] || "0",
+  games: sub["Games Played"] || "0",
+  signature: sub["Most Memorable Moment"] || sub["Career Highlights"] || "",
+  careerHighlights: sub["Career Highlights"] || "",
+  favouriteFormation: sub["Favourite Formation"] || "",
+  tacticalPhilosophy: sub["Tactical Philosophy"] || "",
+  memorableMoment: sub["Most Memorable Moment"] || "",
+  fearedOpponent: sub["Most Feared Opponent"] || "",
+  ambitions: sub["Future Ambitions"] || "",
+  story: sub["Story"] || "",
+  avgPoints: "", // optional calc later
+};
 
       await upsertManagerById(sheets, SHEET_ID, record);
       return asJSON({ ok: true, action: "approved", id: record.id });
