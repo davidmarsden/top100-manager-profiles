@@ -1,4 +1,3 @@
-// netlify/functions/profile-request.mts
 import type { Context } from "@netlify/functions";
 import {
   getSheets, SHEET_ID,
@@ -7,234 +6,124 @@ import {
   toRow, mapRow, json, okCors, colLetters
 } from "./_sheets.mts";
 
-// catch both /api/profile-request and /api/profile-request/
-export const config = { path: "/api/profile-request*" };
+export const config = { path: "/api/profile-request" };
 
-export default async (req: Request, _context: Context) => {
+const toSlug = (s:string="") => s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+
+export default async (req: Request, _ctx: Context) => {
   if (req.method === "OPTIONS") return okCors();
-  if (req.method === "POST") return submitProfile(req);
-  if (req.method === "GET")  return listSubmissions();
-  if (req.method === "PUT")  return approveOrReject(req);
-  return json(405, { error: "Method not allowed" });
+  if (req.method === "POST") return submit(req);
+  if (req.method === "PUT")  return approveOrReject(req); // keep hook for future
+  return json(405, { error:"Method not allowed" });
 };
 
-// POST /api/profile-request
-async function submitProfile(req: Request) {
-  try {
+async function submit(req:Request){
+  try{
     const body = await req.json();
 
-    // helper: pick first non-empty value across many possible keys
-    const get = (...keys: string[]) => {
-      for (const k of keys) {
-        if (k in body) {
+    const pick = (...keys:string[])=>{
+      for (const k of keys){
+        if (k in body){
           const v = (body as any)[k];
-          if (v !== undefined && v !== null && String(v).trim() !== "") {
-            return String(v).trim();
-          }
+          if (v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
         }
       }
       return "";
     };
 
-    // Required
-    const managerName = get("Manager Name", "managerName", "name");
-    const clubName    = get("Club Name", "clubName", "club");
-    if (!managerName) return json(400, { error: "Missing required field: Manager Name" });
-    if (!clubName)    return json(400, { error: "Missing required field: Club Name" });
+    const managerName = pick("Manager Name","managerName","name");
+    const clubName    = pick("Club Name","clubName","club");
+    if (!managerName) return json(400,{error:"Manager Name required"});
+    if (!clubName)    return json(400,{error:"Club Name required"});
 
-    // Optional (accept legacy + camelCase + US/UK spellings)
-    const division            = get("Division", "division", "div");
-    const careerHighlights    = get("Career Highlights", "careerHighlights", "achievements", "highlights");
-    const favouriteFormation  = get("Favourite Formation", "favoriteFormation", "favourite", "favorite", "formation", "favFormation");
-    const tacticalPhilosophy  = get("Tactical Philosophy", "tacticalPhilosophy", "tactics", "philosophy");
-    const mostMemorableMoment = get("Most Memorable Moment", "mostMemorableMoment", "memorableMoment");
-    const mostFearedOpponent  = get("Most Feared Opponent", "mostFearedOpponent", "fearedOpponent");
-    const futureAmbitions     = get("Future Ambitions", "futureAmbitions", "ambitions", "goals");
+    const division            = pick("Division","division","div");
+    const type                = (pick("Type","type") || "rising").toLowerCase();
+    const totalPoints         = pick("Total Points","points");
+    const gamesPlayed         = pick("Games Played","games");
+    const favouriteFormation  = pick("Favourite Formation","favoriteFormation");
+    const tacticalPhilosophy  = pick("Tactical Philosophy","tacticalPhilosophy");
+    const mostMemorableMoment = pick("Most Memorable Moment","mostMemorableMoment");
+    const mostFearedOpponent  = pick("Most Feared Opponent","mostFearedOpponent");
+    const careerHighlights    = pick("Career Highlights","careerHighlights");
+    const futureAmbitions     = pick("Future Ambitions","futureAmbitions");
+    const story               = pick("Story","story","Your Top 100 Story","yourTop100Story");
+    const imageUrl            = pick("Image URL","imageUrl");
 
-    // Story can come from either/both fields; merge them
-    const storyPrimary  = get("Story", "story");
-    const storyExtra    = get("Your Top 100 Story", "yourTop100Story");
-    const combinedStory = [storyPrimary, storyExtra].filter(Boolean).join("\n\n");
-
-    const timestamp = new Date().toISOString();
+    const now = new Date().toISOString();
     const submissionId = `sub_${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
 
-    const record: Record<string, any> = {
-      "Timestamp": timestamp,
+    const sheets = await getSheets();
+
+    // 1) append to Submissions
+    const subRecord: Record<string,string> = {
+      "Timestamp": now,
       "Request ID": submissionId,
       "Manager Name": managerName,
       "Club Name": clubName,
       "Division": division,
-      "Career Highlights": careerHighlights,
+      "Type": type,
+      "Total Points": totalPoints,
+      "Games Played": gamesPlayed,
       "Favourite Formation": favouriteFormation,
       "Tactical Philosophy": tacticalPhilosophy,
       "Most Memorable Moment": mostMemorableMoment,
       "Most Feared Opponent": mostFearedOpponent,
+      "Career Highlights": careerHighlights,
       "Future Ambitions": futureAmbitions,
-      "Story": combinedStory,
-      "Status": "pending",
+      "Story": story,
+      "Image URL": imageUrl,
+      "Status": "approved" // immediate publish for MVP
     };
-
-    const sheets = await getSheets();
     await sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
       range: `${TAB_SUBMISSIONS}!A:Z`,
       valueInputOption: "RAW",
-      requestBody: { values: [toRow(record, SUBMISSION_COLUMNS)] }
+      requestBody: { values: [toRow(subRecord, SUBMISSION_COLUMNS)] }
     });
 
-    return json(200, { success: true, submissionId, message: "Profile submitted and pending review." });
-  } catch (e: any) {
-    console.error("submitProfile error", e);
-    return json(500, { error: "Failed to submit profile", details: e?.message });
-  }
-}
+    // 2) upsert to Managers
+    const id = toSlug(managerName);
+    const points = Number(totalPoints || 0);
+    const games  = Number(gamesPlayed || 0);
+    const avgPoints = games ? points / games : 0;
 
-// GET /api/profile-request
-async function listSubmissions() {
-  try {
-    const sheets = await getSheets();
-    const res = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: `${TAB_SUBMISSIONS}!A:Z`
-    });
+    const signature = (careerHighlights || tacticalPhilosophy || mostMemorableMoment || story || `${managerName} - ${clubName}`).slice(0,150);
 
-    const rows = res.data.values || [];
-    if (rows.length <= 1) return json(200, []);
-    const header = rows[0];
-    const items = rows.slice(1).map(r => mapRow(header, r));
-    return json(200, items);
-  } catch (e: any) {
-    console.error("listSubmissions error", e);
-    return json(500, { error: "Failed to fetch submissions", details: e?.message });
-  }
-}
-
-// PUT /api/profile-request  { action: "approve"|"reject", submissionId: "sub_..." }
-async function approveOrReject(req: Request) {
-  try {
-    const { action, submissionId } = await req.json();
-    if (!submissionId) return json(400, { error: "Missing submissionId" });
-    if (!["approve","reject"].includes(action)) return json(400, { error: "Invalid action" });
-
-    const sheets = await getSheets();
-
-    // Load Submissions to find the row
-    const subRes = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: `${TAB_SUBMISSIONS}!A:Z`
-    });
-
-    const rows = subRes.data.values || [];
-    if (rows.length <= 1) return json(404, { error: "Submission not found" });
-    const header = rows[0];
-
-    const idIdx     = header.indexOf("Request ID");
-    const statusIdx = header.indexOf("Status");
-    if (idIdx < 0 || statusIdx < 0) {
-      return json(500, { error: "Required columns not found in Submissions" });
-    }
-
-    let rowNumber = -1;
-    let rowData: Record<string,string> | null = null;
-
-    for (let i = 1; i < rows.length; i++) {
-      if (rows[i][idIdx] === submissionId) {
-        rowNumber = i + 1; // 1-based for Sheets
-        rowData = mapRow(header, rows[i]);
-        break;
-      }
-    }
-    if (rowNumber === -1 || !rowData) return json(404, { error: "Submission not found" });
-
-    // REJECT → set status only
-    if (action === "reject") {
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SHEET_ID,
-        range: `${TAB_SUBMISSIONS}!${colLetters(statusIdx)}${rowNumber}`,
-        valueInputOption: "RAW",
-        requestBody: { values: [["rejected"]] }
-      });
-      return json(200, { success: true, message: "Submission rejected" });
-    }
-
-    // APPROVE → mark approved…
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SHEET_ID,
-      range: `${TAB_SUBMISSIONS}!${colLetters(statusIdx)}${rowNumber}`,
-      valueInputOption: "RAW",
-      requestBody: { values: [["approved"]] }
-    });
-
-    // …and upsert into Managers (extended fields)
-    const toSlug = (s: string) =>
-      String(s || "")
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "");
-
-    const managerId = toSlug(rowData["Manager Name"] || "");
-
-    const signature =
-      (rowData["Career Highlights"] ||
-       rowData["Tactical Philosophy"] ||
-       rowData["Most Memorable Moment"] ||
-       rowData["Story"] ||
-       `${rowData["Manager Name"] || ""} - ${rowData["Club Name"] || ""}`
-      || "").slice(0, 150);
-
-    const managerRecord: Record<string, any> = {
-      id: managerId,
-      name: rowData["Manager Name"] || "",
-      club: rowData["Club Name"] || "",
-      division: rowData["Division"] || "",
-      signature,
-      story: rowData["Story"] || "",
-      careerHighlights: rowData["Career Highlights"] || "",
-      favouriteFormation: rowData["Favourite Formation"] || "",
-      tacticalPhilosophy: rowData["Tactical Philosophy"] || "",
-      memorableMoment: rowData["Most Memorable Moment"] || "",
-      fearedOpponent: rowData["Most Feared Opponent"] || "",
-      ambitions: rowData["Future Ambitions"] || "",
-      type: "rising",
-      points: "",
-      games: "",
-      avgPoints: ""
+    const managerRecord: Record<string,any> = {
+      id, name: managerName, club: clubName, division, type,
+      points: String(points), games: String(games), avgPoints: String(avgPoints),
+      signature, story,
+      careerHighlights, favouriteFormation, tacticalPhilosophy,
+      memorableMoment: mostMemorableMoment, fearedOpponent: mostFearedOpponent,
+      ambitions: futureAmbitions, imageUrl
     };
 
-    // Read Managers for upsert
+    // Read Managers to update/insert
     const manRes = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: `${TAB_MANAGERS}!A:Z`
+      spreadsheetId: SHEET_ID, range: `${TAB_MANAGERS}!A:Z`
     });
     const mRows = manRes.data.values || [];
-    let mHeader = mRows[0] || [];
+    let header = (mRows[0] || []).map(String);
 
-    if (mRows.length === 0) {
-      // write header row if the sheet is empty
+    // write header if empty
+    if (mRows.length === 0){
       await sheets.spreadsheets.values.append({
-        spreadsheetId: SHEET_ID,
-        range: `${TAB_MANAGERS}!A:Z`,
-        valueInputOption: "RAW",
+        spreadsheetId: SHEET_ID, range: `${TAB_MANAGERS}!A:Z`, valueInputOption:"RAW",
         requestBody: { values: [MANAGER_COLUMNS] }
       });
-      mHeader = MANAGER_COLUMNS;
+      header = MANAGER_COLUMNS;
     }
 
-    const idColIdx = mHeader.findIndex(h => String(h).trim().toLowerCase() === "id");
-    let existingRowIndex = -1;
-    if (idColIdx >= 0) {
-      for (let i = 1; i < mRows.length; i++) {
-        if ((mRows[i][idColIdx] || "") === managerId) {
-          existingRowIndex = i;
-          break;
-        }
+    const idIdx = header.findIndex(h => h.toLowerCase()==="id");
+    let existing = -1;
+    if (idIdx >= 0){
+      for (let i=1;i<mRows.length;i++){
+        if ((mRows[i][idIdx] || "") === id){ existing = i; break; }
       }
     }
 
-    if (existingRowIndex >= 0) {
-      const rowNum = existingRowIndex + 1;
+    if (existing >= 0){
+      const rowNum = existing + 1;
       await sheets.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
         range: `${TAB_MANAGERS}!A${rowNum}:Z${rowNum}`,
@@ -250,9 +139,14 @@ async function approveOrReject(req: Request) {
       });
     }
 
-    return json(200, { success: true, message: "Submission approved and profile published/updated" });
-  } catch (e: any) {
-    console.error("approveOrReject error", e);
-    return json(500, { error: "Failed to process approval", details: e?.message });
+    return json(200, { success:true, id, message:"Profile submitted & published." });
+  }catch(e:any){
+    console.error("submit error", e);
+    return json(500, { error:"Failed to submit profile", details: e?.message });
   }
+}
+
+// kept for future moderation UI (approve/reject)
+async function approveOrReject(_req:Request){
+  return json(501, { error:"Not implemented in MVP" });
 }
