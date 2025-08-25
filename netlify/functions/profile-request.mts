@@ -1,3 +1,4 @@
+// netlify/functions/profile-request.mts
 import type { Context } from "@netlify/functions";
 import {
   getSheets, SHEET_ID,
@@ -5,6 +6,8 @@ import {
   TAB_MANAGERS, MANAGER_COLUMNS,
   toRow, mapRow, json, okCors, colLetters
 } from "./_sheets.mts";
+
+export const config = { path: "/api/profile-request" };
 
 export default async (req: Request, _context: Context) => {
   if (req.method === "OPTIONS") return okCors();
@@ -24,7 +27,9 @@ async function submitProfile(req: Request) {
       for (const k of keys) {
         if (k in body) {
           const v = (body as any)[k];
-          if (v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
+          if (v !== undefined && v !== null && String(v).trim() !== "") {
+            return String(v).trim();
+          }
         }
       }
       return "";
@@ -46,16 +51,16 @@ async function submitProfile(req: Request) {
     const futureAmbitions     = get("Future Ambitions", "futureAmbitions", "ambitions", "goals");
 
     // Story can come from either/both fields; merge them
-    const storyPrimary   = get("Story", "story");
-    const storyExtra     = get("Your Top 100 Story", "yourTop100Story");
-    const combinedStory  = [storyPrimary, storyExtra].filter(Boolean).join("\n\n");
+    const storyPrimary  = get("Story", "story");
+    const storyExtra    = get("Your Top 100 Story", "yourTop100Story");
+    const combinedStory = [storyPrimary, storyExtra].filter(Boolean).join("\n\n");
 
     const timestamp = new Date().toISOString();
-    const requestId = `sub_${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
+    const submissionId = `sub_${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
 
     const record: Record<string, any> = {
       "Timestamp": timestamp,
-      "Request ID": requestId,
+      "Request ID": submissionId,
       "Manager Name": managerName,
       "Club Name": clubName,
       "Division": division,
@@ -77,7 +82,7 @@ async function submitProfile(req: Request) {
       requestBody: { values: [toRow(record, SUBMISSION_COLUMNS)] }
     });
 
-    return json(200, { success: true, submissionId: requestId, message: "Profile submitted and pending review." });
+    return json(200, { success: true, submissionId, message: "Profile submitted and pending review." });
   } catch (e: any) {
     console.error("submitProfile error", e);
     return json(500, { error: "Failed to submit profile", details: e?.message });
@@ -112,31 +117,36 @@ async function approveOrReject(req: Request) {
     if (!["approve","reject"].includes(action)) return json(400, { error: "Invalid action" });
 
     const sheets = await getSheets();
-    const res = await sheets.spreadsheets.values.get({
+
+    // Load Submissions to find the row
+    const subRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
       range: `${TAB_SUBMISSIONS}!A:Z`
     });
 
-    const rows = res.data.values || [];
+    const rows = subRes.data.values || [];
     if (rows.length <= 1) return json(404, { error: "Submission not found" });
     const header = rows[0];
 
-    const idIdx = header.indexOf("Request ID");
+    const idIdx     = header.indexOf("Request ID");
     const statusIdx = header.indexOf("Status");
-    if (idIdx < 0 || statusIdx < 0) return json(500, { error: "Required columns not found" });
+    if (idIdx < 0 || statusIdx < 0) {
+      return json(500, { error: "Required columns not found in Submissions" });
+    }
 
     let rowNumber = -1;
     let rowData: Record<string,string> | null = null;
 
     for (let i = 1; i < rows.length; i++) {
       if (rows[i][idIdx] === submissionId) {
-        rowNumber = i + 1;
+        rowNumber = i + 1; // 1-based for Sheets
         rowData = mapRow(header, rows[i]);
         break;
       }
     }
     if (rowNumber === -1 || !rowData) return json(404, { error: "Submission not found" });
 
+    // REJECT branch — just set status
     if (action === "reject") {
       await sheets.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
@@ -147,7 +157,8 @@ async function approveOrReject(req: Request) {
       return json(200, { success: true, message: "Submission rejected" });
     }
 
-    // APPROVE → mark approved…
+    // APPROVE branch:
+    // 1) mark submission as approved
     await sheets.spreadsheets.values.update({
       spreadsheetId: SHEET_ID,
       range: `${TAB_SUBMISSIONS}!${colLetters(statusIdx)}${rowNumber}`,
@@ -155,52 +166,102 @@ async function approveOrReject(req: Request) {
       requestBody: { values: [["approved"]] }
     });
 
-    // …and publish to Managers
-    const managerId = (rowData["Manager Name"] || "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "");
+    // 2) upsert into Managers (includes extended fields)
+    const toSlug = (s: string) =>
+      String(s || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
 
+    const managerId = toSlug(rowData["Manager Name"] || "");
+
+    // A short signature fallback (kept for the grid card)
     const signature =
       (rowData["Career Highlights"] ||
        rowData["Tactical Philosophy"] ||
        rowData["Most Memorable Moment"] ||
        rowData["Story"] ||
-       `${rowData["Manager Name"]} - ${rowData["Club Name"]}`
-      ).slice(0,150);
+       `${rowData["Manager Name"] || ""} - ${rowData["Club Name"] || ""}`
+      || "").slice(0, 150);
 
-    const storyParts = [
-      rowData["Story"],
-      rowData["Career Highlights"] && `Career Highlights: ${rowData["Career Highlights"]}`,
-      rowData["Tactical Philosophy"] && `Tactical Philosophy: ${rowData["Tactical Philosophy"]}`,
-      rowData["Favourite Formation"] && `Favourite Formation: ${rowData["Favourite Formation"]}`,
-      rowData["Most Memorable Moment"] && `Most Memorable Moment: ${rowData["Most Memorable Moment"]}`,
-      rowData["Most Feared Opponent"] && `Most Feared Opponent: ${rowData["Most Feared Opponent"]}`,
-      rowData["Future Ambitions"] && `Future Ambitions: ${rowData["Future Ambitions"]}`,
-    ].filter(Boolean) as string[];
+    // Full story stays as-is in its own field; extended fields are written separately
+    const managerRecord: Record<string, any> = {
+      // NOTE: Your MANAGER_COLUMNS in _sheets.mts should include these keys
+      // e.g. ["id","name","club","division","signature","story","careerHighlights","favouriteFormation","tacticalPhilosophy","memorableMoment","fearedOpponent","ambitions","type","points","games","avgPoints"]
+      id: managerId,
+      name: rowData["Manager Name"] || "",
+      club: rowData["Club Name"] || "",
+      division: rowData["Division"] || "",
+      signature,
+      story: rowData["Story"] || "",
+      careerHighlights: rowData["Career Highlights"] || "",
+      favouriteFormation: rowData["Favourite Formation"] || "",
+      tacticalPhilosophy: rowData["Tactical Philosophy"] || "",
+      memorableMoment: rowData["Most Memorable Moment"] || "",
+      fearedOpponent: rowData["Most Feared Opponent"] || "",
+      ambitions: rowData["Future Ambitions"] || "",
+      // optional defaults the site can rely on
+      type: "rising",
+      points: "",
+      games: "",
+      avgPoints: ""
+    };
 
-    const fullStory = storyParts.join("\n\n").trim();
-
-    await sheets.spreadsheets.values.append({
+    // Read Managers to upsert by id
+    const manRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
-      range: `${TAB_MANAGERS}!A:Z`,
-      valueInputOption: "RAW",
-      requestBody: { values: [[
-        managerId,
-        rowData["Manager Name"] || "",
-        rowData["Club Name"] || "",
-        rowData["Division"] || "",
-        signature,
-        fullStory
-      ]] }
+      range: `${TAB_MANAGERS}!A:Z`
     });
+    const mRows = manRes.data.values || [];
+    let mHeader = mRows[0] || [];
 
-    return json(200, { success: true, message: "Profile approved and published" });
+    // If Managers is empty, write header row first using MANAGER_COLUMNS
+    if (mRows.length === 0) {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: SHEET_ID,
+        range: `${TAB_MANAGERS}!A:Z`,
+        valueInputOption: "RAW",
+        requestBody: { values: [MANAGER_COLUMNS] }
+      });
+      mHeader = MANAGER_COLUMNS;
+    }
+
+    // Find existing row by "id" column
+    const idColIdx = mHeader.findIndex(h => String(h).trim().toLowerCase() === "id");
+    let existingRowIndex = -1;
+    if (idColIdx >= 0) {
+      for (let i = 1; i < mRows.length; i++) {
+        if ((mRows[i][idColIdx] || "") === managerId) {
+          existingRowIndex = i; // 0-based (i=1 means row 2 in sheet)
+          break;
+        }
+      }
+    }
+
+    if (existingRowIndex >= 0) {
+      // UPDATE (overwrite entire row by columns)
+      const rowNum = existingRowIndex + 1; // sheet is 1-based
+      const values = [toRow(managerRecord, MANAGER_COLUMNS)];
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SHEET_ID,
+        range: `${TAB_MANAGERS}!A${rowNum}:Z${rowNum}`,
+        valueInputOption: "RAW",
+        requestBody: { values }
+      });
+    } else {
+      // INSERT
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: SHEET_ID,
+        range: `${TAB_MANAGERS}!A:Z`,
+        valueInputOption: "RAW",
+        requestBody: { values: [toRow(managerRecord, MANAGER_COLUMNS)] }
+      });
+    }
+
+    return json(200, { success: true, message: "Submission approved and profile published/updated" });
   } catch (e: any) {
     console.error("approveOrReject error", e);
     return json(500, { error: "Failed to process approval", details: e?.message });
   }
 }
-
-export const config = { path: "/api/profile-request" };
