@@ -1,4 +1,3 @@
-// netlify/functions/env-debug.mts
 export const config = { path: "/api/env-debug" };
 
 const json = (b: unknown, s = 200) =>
@@ -8,12 +7,13 @@ const json = (b: unknown, s = 200) =>
   });
 
 export default async () => {
-  const vars = [
+  const keys = [
     "GOOGLE_SHEET_ID",
     "GOOGLE_SERVICE_ACCOUNT",
     "GOOGLE_SHEETS_WEBHOOK_URL",
-    "NODE_VERSION",
   ];
-  const present = Object.fromEntries(vars.map(k => [k, !!process.env[k]]));
-  return json({ ok: true, present });
+  return json({
+    ok: true,
+    present: Object.fromEntries(keys.map(k => [k, !!process.env[k]])),
+  });
 };
