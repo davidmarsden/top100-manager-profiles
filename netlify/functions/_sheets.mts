@@ -1,35 +1,22 @@
-// netlify/functions/_sheets.mts
-import { google } from 'googleapis';
+import { google } from "googleapis";
 
-export const SHEET_ID = Netlify.env.get("GOOGLE_SHEET_ID");
+export const SHEET_ID = Netlify.env.get("GOOGLE_SHEET_ID")!;
 export const TAB_SUBMISSIONS = "Submissions";
 export const TAB_MANAGERS = "Managers";
 
-// EXACT header order for Submissions (must match the Submissions tab row 1):
-export const SUBMISSION_COLUMNS = [
-  "Timestamp",
-  "Request ID",
-  "Manager Name",
-  "Club Name",
-  "Division",
-  "Career Highlights",
-  "Favourite Formation",
-  "Tactical Philosophy",
-  "Most Memorable Moment",
-  "Most Feared Opponent",
-  "Future Ambitions",
-  "Story",
-  "Status",
+export const MANAGER_COLUMNS = [
+  "id","name","club","division","type","points","games","avgPoints",
+  "signature","story",
+  "careerHighlights","favouriteFormation","tacticalPhilosophy",
+  "memorableMoment","fearedOpponent","ambitions","imageUrl"
 ];
 
-// === Managers columns ===
-// Update your Google Sheet "Managers" tab first row to match this EXACT order.
-export const MANAGER_COLUMNS = [
-  "id","name","club","division","signature","story",
-  "careerHighlights","favouriteFormation","tacticalPhilosophy",
-  "memorableMoment","fearedOpponent","ambitions",
-  "type","points","games","avgPoints"
+export const SUBMISSION_COLUMNS = [
+  "Timestamp","Request ID","Manager Name","Club Name","Division","Type","Total Points","Games Played",
+  "Favourite Formation","Tactical Philosophy","Most Memorable Moment","Most Feared Opponent","Career Highlights",
+  "Future Ambitions","Story","Image URL","Status"
 ];
+
 function parseServiceAccount() {
   const raw = Netlify.env.get("GOOGLE_SERVICE_ACCOUNT") || "";
   const json = raw.trim().startsWith("{")
@@ -44,47 +31,33 @@ export async function getSheets() {
     creds.client_email,
     undefined,
     creds.private_key,
-    // RW scope so we can append/update both tabs
     ["https://www.googleapis.com/auth/spreadsheets"]
   );
   return google.sheets({ version: "v4", auth: jwt });
 }
 
-export function corsHeaders() {
+export function corsHeaders(){
   return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization",
+    "Access-Control-Allow-Origin":"*",
+    "Access-Control-Allow-Methods":"GET,POST,PUT,OPTIONS",
+    "Access-Control-Allow-Headers":"Content-Type,Authorization"
   };
 }
-
-export function json(status: number, body: unknown) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json", ...corsHeaders() }
-  });
+export function okCors(){ return new Response(null,{status:200, headers:corsHeaders()}); }
+export function json(status:number, body:any){
+  return new Response(JSON.stringify(body), { status, headers:{ "Content-Type":"application/json", ...corsHeaders() }});
 }
 
-export function okCors() {
-  return new Response(null, { status: 200, headers: corsHeaders() });
-}
-
-export function toRow(obj: Record<string, any>, cols: string[]) {
+export function toRow(obj:Record<string,any>, cols:string[]){
   return cols.map(c => obj[c] ?? "");
 }
-
-export function mapRow(header: string[], row: string[]) {
-  const o: Record<string,string> = {};
+export function mapRow(header:string[], row:string[]){
+  const o:Record<string,string> = {};
   for (let i=0;i<header.length;i++) o[header[i]] = row[i] ?? "";
   return o;
 }
-
-export function colLetters(zeroBasedIndex: number) {
-  let s = "", x = zeroBasedIndex + 1;
-  while (x > 0) {
-    const m = (x - 1) % 26;
-    s = String.fromCharCode(65 + m) + s;
-    x = Math.floor((x - 1) / 26);
-  }
+export function colLetters(zeroBased:number){
+  let s="", x=zeroBased+1;
+  while(x>0){ const m=(x-1)%26; s=String.fromCharCode(65+m)+s; x=Math.floor((x-1)/26); }
   return s;
 }
