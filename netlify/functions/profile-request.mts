@@ -7,7 +7,8 @@ import {
   toRow, mapRow, json, okCors, colLetters
 } from "./_sheets.mts";
 
-export const config = { path: "/api/profile-request" };
+// catch both /api/profile-request and /api/profile-request/
+export const config = { path: "/api/profile-request*" };
 
 export default async (req: Request, _context: Context) => {
   if (req.method === "OPTIONS") return okCors();
@@ -146,7 +147,7 @@ async function approveOrReject(req: Request) {
     }
     if (rowNumber === -1 || !rowData) return json(404, { error: "Submission not found" });
 
-    // REJECT branch — just set status
+    // REJECT → set status only
     if (action === "reject") {
       await sheets.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
@@ -157,8 +158,7 @@ async function approveOrReject(req: Request) {
       return json(200, { success: true, message: "Submission rejected" });
     }
 
-    // APPROVE branch:
-    // 1) mark submission as approved
+    // APPROVE → mark approved…
     await sheets.spreadsheets.values.update({
       spreadsheetId: SHEET_ID,
       range: `${TAB_SUBMISSIONS}!${colLetters(statusIdx)}${rowNumber}`,
@@ -166,7 +166,7 @@ async function approveOrReject(req: Request) {
       requestBody: { values: [["approved"]] }
     });
 
-    // 2) upsert into Managers (includes extended fields)
+    // …and upsert into Managers (extended fields)
     const toSlug = (s: string) =>
       String(s || "")
         .toLowerCase()
@@ -176,7 +176,6 @@ async function approveOrReject(req: Request) {
 
     const managerId = toSlug(rowData["Manager Name"] || "");
 
-    // A short signature fallback (kept for the grid card)
     const signature =
       (rowData["Career Highlights"] ||
        rowData["Tactical Philosophy"] ||
@@ -185,10 +184,7 @@ async function approveOrReject(req: Request) {
        `${rowData["Manager Name"] || ""} - ${rowData["Club Name"] || ""}`
       || "").slice(0, 150);
 
-    // Full story stays as-is in its own field; extended fields are written separately
     const managerRecord: Record<string, any> = {
-      // NOTE: Your MANAGER_COLUMNS in _sheets.mts should include these keys
-      // e.g. ["id","name","club","division","signature","story","careerHighlights","favouriteFormation","tacticalPhilosophy","memorableMoment","fearedOpponent","ambitions","type","points","games","avgPoints"]
       id: managerId,
       name: rowData["Manager Name"] || "",
       club: rowData["Club Name"] || "",
@@ -201,14 +197,13 @@ async function approveOrReject(req: Request) {
       memorableMoment: rowData["Most Memorable Moment"] || "",
       fearedOpponent: rowData["Most Feared Opponent"] || "",
       ambitions: rowData["Future Ambitions"] || "",
-      // optional defaults the site can rely on
       type: "rising",
       points: "",
       games: "",
       avgPoints: ""
     };
 
-    // Read Managers to upsert by id
+    // Read Managers for upsert
     const manRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
       range: `${TAB_MANAGERS}!A:Z`
@@ -216,8 +211,8 @@ async function approveOrReject(req: Request) {
     const mRows = manRes.data.values || [];
     let mHeader = mRows[0] || [];
 
-    // If Managers is empty, write header row first using MANAGER_COLUMNS
     if (mRows.length === 0) {
+      // write header row if the sheet is empty
       await sheets.spreadsheets.values.append({
         spreadsheetId: SHEET_ID,
         range: `${TAB_MANAGERS}!A:Z`,
@@ -227,30 +222,26 @@ async function approveOrReject(req: Request) {
       mHeader = MANAGER_COLUMNS;
     }
 
-    // Find existing row by "id" column
     const idColIdx = mHeader.findIndex(h => String(h).trim().toLowerCase() === "id");
     let existingRowIndex = -1;
     if (idColIdx >= 0) {
       for (let i = 1; i < mRows.length; i++) {
         if ((mRows[i][idColIdx] || "") === managerId) {
-          existingRowIndex = i; // 0-based (i=1 means row 2 in sheet)
+          existingRowIndex = i;
           break;
         }
       }
     }
 
     if (existingRowIndex >= 0) {
-      // UPDATE (overwrite entire row by columns)
-      const rowNum = existingRowIndex + 1; // sheet is 1-based
-      const values = [toRow(managerRecord, MANAGER_COLUMNS)];
+      const rowNum = existingRowIndex + 1;
       await sheets.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
         range: `${TAB_MANAGERS}!A${rowNum}:Z${rowNum}`,
         valueInputOption: "RAW",
-        requestBody: { values }
+        requestBody: { values: [toRow(managerRecord, MANAGER_COLUMNS)] }
       });
     } else {
-      // INSERT
       await sheets.spreadsheets.values.append({
         spreadsheetId: SHEET_ID,
         range: `${TAB_MANAGERS}!A:Z`,
