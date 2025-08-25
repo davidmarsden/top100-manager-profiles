@@ -7,22 +7,34 @@
   node_bundler = "esbuild"
   external_node_modules = ["googleapis"]
 
-# ---- API redirects (explicit) ----
+# API → Netlify Functions
 [[redirects]]
   from = "/api/managers"
-  to   = "/.netlify/functions/managers"
+  to = "/.netlify/functions/managers"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/managers/"
-  to   = "/.netlify/functions/managers"
+  to = "/.netlify/functions/managers"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/manager"
+  to = "/.netlify/functions/manager"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/manager/*"
+  to = "/.netlify/functions/manager"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/profile-request"
-  to   = "/.netlify/functions/profile-request"
+  to = "/.netlify/functions/profile-request"
   status = 200
   force = true
 
@@ -32,29 +44,21 @@
   status = 200
   force = true
 
-
-[[redirects]]
-  from = "/api/manager"
-  to   = "/.netlify/functions/manager"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/manager/*"
-  to   = "/.netlify/functions/manager"
-  status = 200
-  force = true
-
-# keep your /admin redirect, then the SPA fallback LAST
-
-# ---- Admin (static) ----
+# Static pages (optional, if you have these)
 [[redirects]]
   from = "/admin"
   to   = "/admin/index.html"
   status = 200
+  force = true
 
-# ---- SPA fallback (must be last!) ----
+[[redirects]]
+  from = "/request"
+  to   = "/public/request/index.html"
+  status = 200
+  force = true
+
+# SPA fallback LAST
 [[redirects]]
   from = "/*"
-  to   = "/index.html"
+  to = "/index.html"
   status = 200
