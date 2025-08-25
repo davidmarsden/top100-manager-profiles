@@ -4,16 +4,15 @@
   functions = "netlify/functions"
 
 [functions]
-  node_bundler = "esbuild"
   external_node_modules = ["googleapis"]
+  node_bundler = "esbuild"
 
-# API → Functions
+# API rewrites – both with and without trailing slash
 [[redirects]]
   from = "/api/managers"
   to = "/.netlify/functions/managers"
   status = 200
   force = true
-
 [[redirects]]
   from = "/api/managers/"
   to = "/.netlify/functions/managers"
@@ -25,7 +24,6 @@
   to = "/.netlify/functions/manager"
   status = 200
   force = true
-
 [[redirects]]
   from = "/api/manager/*"
   to = "/.netlify/functions/manager"
@@ -37,14 +35,13 @@
   to = "/.netlify/functions/profile-request"
   status = 200
   force = true
-
 [[redirects]]
   from = "/api/profile-request/"
   to = "/.netlify/functions/profile-request"
   status = 200
   force = true
 
-# SPA fallback last
+# SPA fallback (hash routing doesn’t strictly need this, but it’s fine)
 [[redirects]]
   from = "/*"
   to = "/index.html"
