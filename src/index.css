@@ -1,107 +1,143 @@
-:root { color-scheme: light dark; }
-* { box-sizing: border-box; }
-html, body, #root { height: 100%; margin: 0; }
-
+/* ==== Design tokens ====================================================== */
 :root{
-  --bg1:#ff9a9e;
-  --bg2:#fecfef;
-  --ink:#1f2937;
-  --ink-dim:#6b7280;
-  --panel:#ffffff;
-  --chip:#111827;
-  --chip-ink:#fff;
-  --accent:#ef4444; /* salmon-ish button */
+  --bg1:#f9b3c0;        /* warm pink */
+  --bg2:#a2d2ff;        /* cool blue */
+  --text:#1e293b;       /* slate-800 */
+  --muted:#64748b;      /* slate-500 */
+  --brand:#2563eb;      /* blue-600 */
+  --brand-ink:#eff6ff;  /* blue-50 */
+  --ok:#16a34a;         /* green-600 */
+  --warn:#eab308;       /* amber-500 */
+  --err:#ef4444;        /* red-500 */
+
+  --radius:18px;
+  --shadow-sm:0 2px 8px rgba(15,23,42,.06);
+  --shadow-md:0 8px 24px rgba(15,23,42,.10);
+  --shadow-lg:0 20px 40px rgba(15,23,42,.18);
+
+  --step--1: clamp(12px, .82vw + 9px, 14px);
+  --step-0:  clamp(14px, .9vw + 10px, 16px);
+  --step-1:  clamp(18px, 1.1vw + 12px, 20px);
+  --step-2:  clamp(22px, 1.6vw + 12px, 26px);
+  --step-3:  clamp(28px, 2vw + 14px, 34px);
+  --step-4:  clamp(36px, 3vw + 16px, 46px);
 }
 
-*{box-sizing:border-box}
-html,body,#root{height:100%}
+/* ==== Base =============================================================== */
+*{ box-sizing: border-box }
+html,body,#root{ height:100% }
 body{
   margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji", "Segoe UI Symbol";
-  color:var(--ink);
-  background: linear-gradient(135deg, var(--bg1), var(--bg2));
+  font: 400 var(--step-0)/1.55 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  color:var(--text);
+  background: linear-gradient(135deg, var(--bg1), var(--bg2)) fixed;
 }
+a{ color:var(--brand); text-decoration: none }
+a:hover{ text-decoration: underline }
+img{ max-width:100%; height:auto; display:block }
 
-a{color:inherit}
-
+/* ==== Layout helpers ===================================================== */
 .container{
-  max-width:1200px;
-  margin:0 auto;
-  padding:1.5rem;
+  width:min(1100px, 100%);
+  margin-inline:auto;
+  padding: 20px clamp(14px, 3.5vw, 28px);
 }
 
-.header{
-  background: linear-gradient(to right, var(--bg1), var(--bg2));
-  color:#fff;
-  border-bottom:2px solid rgba(255,255,255,.25);
-  position: sticky; top:0; z-index:10;
-}
+.stack{ display:grid; gap:18px }
+.cluster{ display:flex; flex-wrap:wrap; gap:12px; align-items:center }
+.right{ margin-left:auto }
 
-.header-inner{
-  max-width:1200px;
-  margin:0 auto;
-  padding:1rem 1.5rem;
-  display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
-}
-
-.brand{font-weight:800; letter-spacing:.02em; font-size:1.25rem}
-
-.btn{
-  display:inline-flex; align-items:center; justify-content:center;
-  padding:.625rem 1rem; border-radius:12px; text-decoration:none; border:none; cursor:pointer;
-  background: var(--accent); color:white; font-weight:600;
-  box-shadow: 0 8px 24px rgba(239,68,68,.25);
-}
-.btn.secondary{ background:#111827; }
-.btn.ghost{ background:transparent; color:#fff; border:1px solid rgba(255,255,255,.5); }
-
-.panel{
-  background: rgba(255,255,255,.95);
-  border-radius:16px;
-  box-shadow: 0 12px 36px rgba(0,0,0,.12);
-}
-
-.controls{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1rem; }
-
-.input, .select, .textarea{
-  width:100%; border:2px solid #e5e7eb; border-radius:10px; padding:.75rem; font-size:1rem; background:#fff;
-}
-
-.grid{
-  display:grid; gap:1.25rem;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-}
-
+/* ==== Surface / Card / Chips ============================================ */
 .card{
-  background: #fff;
-  border-radius:20px;
-  border:3px solid #111; /* Top Trumps/Panini border vibe */
-  box-shadow: 0 8px 28px rgba(0,0,0,.15);
-  padding:1rem;
-  position:relative;
-  transition: transform .15s ease, box-shadow .15s ease;
+  background:#fff;
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-sm);
+  padding:18px 20px;
 }
-.card:hover{ transform: translateY(-3px); box-shadow:0 18px 40px rgba(0,0,0,.2); }
+.card:hover{ box-shadow:var(--shadow-md) }
 
-.card-title{ font-weight:800; font-size:1.15rem; margin:0 0 .25rem; }
-.card-sub{ color:var(--ink-dim); margin:0 0 .75rem; }
-
-.badges{ display:flex; gap:.5rem; flex-wrap:wrap; margin:.5rem 0 1rem; }
 .badge{
-  font-weight:700; font-size:.8rem; padding:.25rem .6rem; border-radius:999px; border:2px solid #111; background:#fef08a;
+  display:inline-flex; align-items:center; gap:8px;
+  padding:.25rem .6rem;
+  border-radius:999px;
+  font-size:var(--step--1);
+  color:#0f172a; background:#f1f5f9;
 }
-.badge.type{ background:#bfdbfe; }
-.badge.small{ font-size:.7rem; padding:.2rem .5rem; }
+.badge.brand{ background:var(--brand-ink); color:var(--brand) }
+.badge.muted{ color:var(--muted); background:#f8fafc }
 
-.stat{ text-align:center }
-.stat .n{ font-weight:800; font-size:1.25rem; }
-
-.figure{
-  width:100%; aspect-ratio: 3/2; border:3px solid #111; border-radius:14px; background:#f3f4f6;
-  display:grid; place-items:center; overflow:hidden; margin-bottom:.75rem;
+/* ==== Buttons ============================================================ */
+.btn{
+  appearance:none; border:0; cursor:pointer;
+  padding:.7rem 1rem; border-radius:999px;
+  background:#fff; color:var(--text); box-shadow:var(--shadow-sm);
+  transition: transform .04s ease, box-shadow .2s ease;
+  display:inline-flex; gap:.6rem; align-items:center;
 }
-.figure img{ width:100%; height:100%; object-fit:cover; display:block; }
+.btn:hover{ box-shadow:var(--shadow-md) }
+.btn:active{ transform: translateY(1px) }
+.btn.primary{ background:var(--brand); color:white }
+.btn.ghost{ background:transparent; border:1px solid rgba(255,255,255,.5); color:#fff }
 
-.footer{
-  text-align:center; color:#fff; opacity:.9; padding:2rem 0 3rem;
+/* ==== Header (stick to top) ============================================= */
+.sitebar{
+  position:sticky; top:0; z-index:10;
+  backdrop-filter: saturate(140%) blur(8px);
+  background: linear-gradient(90deg, rgba(249,179,192,.85), rgba(162,210,255,.85));
+  border-bottom:1px solid rgba(255,255,255,.6);
 }
+.brand{
+  font-weight:800; letter-spacing:.2px; font-size:var(--step-1);
+  display:flex; align-items:center; gap:.6rem;
+}
+
+/* ==== List view (home) =================================================== */
+.grid{
+  --min: 320px;
+  display:grid; gap:16px;
+  grid-template-columns: repeat(auto-fit, minmax(var(--min), 1fr));
+}
+.manager-card .title{
+  font-weight:700; font-size:var(--step-1); margin: 0 0 4px;
+}
+.manager-card .subtitle{
+  color:var(--muted); margin:0 0 12px; font-size:var(--step--1);
+}
+.manager-card .footer{ display:flex; gap:10px; align-items:center; margin-top:10px }
+
+/* ==== Profile page ======================================================= */
+.profile-header{
+  display:flex; align-items:flex-start; gap:18px; margin-bottom:12px;
+}
+.profile-name{ font-size:var(--step-3); font-weight:800; margin:0 }
+.profile-meta{ color:var(--muted); margin-top:4px }
+
+.profile-grid{
+  display:grid; gap:18px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 880px){
+  .profile-grid{ grid-template-columns: minmax(260px, 340px) 1fr }
+}
+
+.section h2{
+  font-size:var(--step-1); margin:0 0 10px; font-weight:800;
+}
+.section p{ margin:.3rem 0 }
+
+/* ==== Admin table polish (optional) ===================================== */
+.table{
+  width:100%; border-collapse:separate; border-spacing:0 8px;
+}
+.table th{
+  text-align:left; font-size:var(--step--1); color:var(--muted);
+  font-weight:600; padding:0 10px 6px;
+}
+.table td{
+  background:#fff; padding:12px 10px; border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb;
+}
+.table tr td:first-child{ border-left:1px solid #e5e7eb; border-top-left-radius:12px; border-bottom-left-radius:12px }
+.table tr td:last-child{ border-right:1px solid #e5e7eb; border-top-right-radius:12px; border-bottom-right-radius:12px }
+
+/* ==== Utilities ========================================================== */
+.m0{ margin:0 } .mt8{ margin-top:8px } .mt16{ margin-top:16px }
