@@ -88,3 +88,14 @@ export async function upsertManagerById(id:string, record:Record<string, any>) {
     }
   }
   const row = MANAGERS_HEADERS.map(h => record[h] ?? "");
+  if (rowIndex === -1) {
+    await appendObject("Managers", record, MANAGERS_HEADERS);
+  } else {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `Managers!${rowIndex + 1}:${rowIndex + 1}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [row] },
+    });
+  }
+}
