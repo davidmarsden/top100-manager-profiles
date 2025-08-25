@@ -1,9 +1,0 @@
-# API routes
-/api/*  /.netlify/functions/:splat  200
-
-# Static pages
-/request  /request.html  200
-/admin  /admin/index.html  200
-
-# SPA fallback (must be last)
-/*  /index.html  200
