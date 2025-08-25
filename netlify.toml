@@ -6,18 +6,9 @@
 [build.environment]
   NODE_VERSION = "18"
 
-[functions]
-  external_node_modules = ["googleapis"]
-  node_bundler = "esbuild"
-
-# API rewrites – both with and without trailing slash
+# Your redirects for functions (keep the ones you already had)
 [[redirects]]
   from = "/api/managers"
-  to = "/.netlify/functions/managers"
-  status = 200
-  force = true
-[[redirects]]
-  from = "/api/managers/"
   to = "/.netlify/functions/managers"
   status = 200
   force = true
@@ -27,24 +18,14 @@
   to = "/.netlify/functions/manager"
   status = 200
   force = true
-[[redirects]]
-  from = "/api/manager/*"
-  to = "/.netlify/functions/manager"
-  status = 200
-  force = true
 
 [[redirects]]
   from = "/api/profile-request"
   to = "/.netlify/functions/profile-request"
   status = 200
   force = true
-[[redirects]]
-  from = "/api/profile-request/"
-  to = "/.netlify/functions/profile-request"
-  status = 200
-  force = true
 
-# SPA fallback (hash routing doesn’t strictly need this, but it’s fine)
+# SPA fallback
 [[redirects]]
   from = "/*"
   to = "/index.html"
