@@ -1,5 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react";
 
+import React from "react";
+
+export default function App() {
+  return (
+    <div style={{
+      minHeight: "100vh",
+      display: "grid",
+      placeItems: "center",
+      background: "linear-gradient(135deg,#a78bfa,#7dd3fc 60%,#f0abfc)"
+    }}>
+      <h1 style={{ color: "white", fontFamily: "system-ui, sans-serif" }}>
+        Top 100 Manager Profiles
+      </h1>
+    </div>
+  );
+}
+
 /** ---------- Utilities ---------- */
 const slugify = (s="") =>
   String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
