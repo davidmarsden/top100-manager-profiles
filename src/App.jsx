@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 
+import RequestForm from "./RequestForm.jsx";
+
 const App = () => {
   const [managers, setManagers] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -267,6 +269,11 @@ const App = () => {
             </div>
           </div>
         </div>
+
+const pathname = typeof window !== "undefined" ? window.location.pathname : "/";
+if (pathname === "/request") {
+  return <RequestForm />;
+}
 
         {/* Profile */}
         <div style={{ maxWidth: "800px", margin: "2rem auto", padding: "0 1rem" }}>
