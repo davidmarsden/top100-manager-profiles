@@ -99,17 +99,19 @@ export async function getSheets() {
 
 /* -------------------- HTTP helpers -------------------- */
 
-/** JSON response wrapper */
-export function json(status: number, body: unknown) {
-  return {
-    statusCode: status,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  };
+/** JSON response wrapper — returns a real Web Response (Netlify next-gen expects this) */
+export function json(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  });
 }
 
-/** ok(data) -> 200 JSON */
-export const ok = (data: unknown) => json(200, data);
+/** ok(data) -> 200 JSON Response */
+export const ok = (data: unknown): Response => json(200, data);
 
 /* -------------------- Sheet utilities -------------------- */
 
