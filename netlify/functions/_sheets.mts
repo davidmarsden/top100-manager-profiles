@@ -1,32 +1,67 @@
+// Shared helper for Google Sheets access and JSON/CORS utilities
 import { google } from "googleapis";
 
-export const SHEET_ID = Netlify.env.get("GOOGLE_SHEET_ID")!;
+export const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 export const TAB_SUBMISSIONS = "Submissions";
 export const TAB_MANAGERS = "Managers";
 
+// EXACT header order we’ll write to Managers (include extended fields)
 export const MANAGER_COLUMNS = [
-  "id","name","club","division","type","points","games","avgPoints",
-  "signature","story",
+  "id","name","club","division","signature","story",
   "careerHighlights","favouriteFormation","tacticalPhilosophy",
-  "memorableMoment","fearedOpponent","ambitions","imageUrl"
+  "memorableMoment","fearedOpponent","ambitions",
+  "type","points","games","avgPoints"
 ];
 
 export const SUBMISSION_COLUMNS = [
-  "Timestamp","Request ID","Manager Name","Club Name","Division","Type","Total Points","Games Played",
-  "Favourite Formation","Tactical Philosophy","Most Memorable Moment","Most Feared Opponent","Career Highlights",
-  "Future Ambitions","Story","Image URL","Status"
+  "Timestamp","Request ID","Manager Name","Club Name","Division",
+  "Career Highlights","Favourite Formation","Tactical Philosophy",
+  "Most Memorable Moment","Most Feared Opponent","Future Ambitions",
+  "Story","Status"
 ];
 
-function parseServiceAccount() {
-  const raw = Netlify.env.get("GOOGLE_SERVICE_ACCOUNT") || "";
-  const json = raw.trim().startsWith("{")
-    ? JSON.parse(raw)
-    : JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
-  return json;
+export function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type,Authorization"
+  };
+}
+
+export function json(status, body) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json", ...corsHeaders() }
+  });
+}
+
+export function ok() {
+  return new Response(null, { status: 200, headers: corsHeaders() });
+}
+
+export function toRow(obj, cols) {
+  return cols.map((c) => obj[c] ?? "");
+}
+
+export function mapRow(header, row) {
+  const o = {};
+  for (let i = 0; i < header.length; i++) o[header[i]] = row[i] ?? "";
+  return o;
+}
+
+export function colLetters(zeroIdx) {
+  let s = "", x = zeroIdx + 1;
+  while (x > 0) { const m = (x - 1) % 26; s = String.fromCharCode(65 + m) + s; x = Math.floor((x - 1) / 26); }
+  return s;
 }
 
 export async function getSheets() {
-  const creds = parseServiceAccount();
+  // GOOGLE_SERVICE_ACCOUNT can be plain JSON or base64-encoded JSON
+  const raw = process.env.GOOGLE_SERVICE_ACCOUNT || "";
+  const creds = raw.trim().startsWith("{")
+    ? JSON.parse(raw)
+    : JSON.parse(Buffer.from(raw, "base64").toString("utf8"));
+
   const jwt = new google.auth.JWT(
     creds.client_email,
     undefined,
@@ -34,30 +69,4 @@ export async function getSheets() {
     ["https://www.googleapis.com/auth/spreadsheets"]
   );
   return google.sheets({ version: "v4", auth: jwt });
-}
-
-export function corsHeaders(){
-  return {
-    "Access-Control-Allow-Origin":"*",
-    "Access-Control-Allow-Methods":"GET,POST,PUT,OPTIONS",
-    "Access-Control-Allow-Headers":"Content-Type,Authorization"
-  };
-}
-export function okCors(){ return new Response(null,{status:200, headers:corsHeaders()}); }
-export function json(status:number, body:any){
-  return new Response(JSON.stringify(body), { status, headers:{ "Content-Type":"application/json", ...corsHeaders() }});
-}
-
-export function toRow(obj:Record<string,any>, cols:string[]){
-  return cols.map(c => obj[c] ?? "");
-}
-export function mapRow(header:string[], row:string[]){
-  const o:Record<string,string> = {};
-  for (let i=0;i<header.length;i++) o[header[i]] = row[i] ?? "";
-  return o;
-}
-export function colLetters(zeroBased:number){
-  let s="", x=zeroBased+1;
-  while(x>0){ const m=(x-1)%26; s=String.fromCharCode(65+m)+s; x=Math.floor((x-1)/26); }
-  return s;
 }
