@@ -25,26 +25,11 @@ export const SUBMISSION_COLUMNS = [
 // === Managers columns ===
 // Update your Google Sheet "Managers" tab first row to match this EXACT order.
 export const MANAGER_COLUMNS = [
-  "id",
-  "name",
-  "club",
-  "division",
-  "signature",
-  "story",
-  // Extended fields used by individual profile pages:
-  "careerHighlights",
-  "favouriteFormation",
-  "tacticalPhilosophy",
-  "memorableMoment",
-  "fearedOpponent",
-  "ambitions",
-  // Optional numeric/meta fields (kept for cards/sorting; safe to leave blank):
-  "type",
-  "points",
-  "games",
-  "avgPoints",
+  "id","name","club","division","signature","story",
+  "careerHighlights","favouriteFormation","tacticalPhilosophy",
+  "memorableMoment","fearedOpponent","ambitions",
+  "type","points","games","avgPoints"
 ];
-
 function parseServiceAccount() {
   const raw = Netlify.env.get("GOOGLE_SERVICE_ACCOUNT") || "";
   const json = raw.trim().startsWith("{")
