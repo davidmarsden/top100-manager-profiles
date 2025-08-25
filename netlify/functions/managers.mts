@@ -1,31 +1,61 @@
-import type { Context } from "@netlify/functions";
-import { getSheets, SHEET_ID, TAB_MANAGERS, json, okCors, mapRow } from "./_sheets.mts";
+// netlify/functions/managers.mts
+import { json } from "@netlify/functions";
+import { google } from "googleapis";
 
-export const config = { path: "/api/managers" };
+export default async () => {
+  try {
+    // EARLY GUARD: if env is missing, don't try Google — just return empty list.
+    if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_SERVICE_ACCOUNT) {
+      console.warn("managers: missing GOOGLE_SHEET_ID or GOOGLE_SERVICE_ACCOUNT");
+      return json(200, []); // always JSON
+    }
 
-export default async (req: Request, _ctx: Context) => {
-  if (req.method === "OPTIONS") return okCors();
-  if (req.method !== "GET") return json(405, { error:"Method not allowed" });
+    const svc = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT!);
+    const auth = new google.auth.JWT({
+      email: svc.client_email,
+      key: svc.private_key,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+    });
+    const sheets = google.sheets({ version: "v4", auth });
 
-if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_SERVICE_ACCOUNT) {
-  return new Response(JSON.stringify([]), { status: 200, headers: { "Content-Type": "application/json" } });
-}
-
-  try{
-    const sheets = await getSheets();
-    const res = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: `${TAB_MANAGERS}!A:Z`
+    const { data } = await sheets.spreadsheets.values.get({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID!,
+      range: "Managers!A1:Z",
     });
 
-    const rows = res.data.values || [];
-    if (rows.length <= 1) return json(200, []);
-    const header = rows[0].map(String);
-    const items = rows.slice(1).map(r => mapRow(header, r));
+    const rows = data.values || [];
+    if (rows.length < 2) return json(200, []);
 
-    return json(200, items);
-  }catch(e:any){
-    console.error("managers error", e);
-    return json(200, []); // keep UI usable
+    const headers = rows[0].map((h) => String(h).trim().toLowerCase());
+    const idx = (name: string) => headers.indexOf(name);
+    const get = (r: any[], name: string) => r[idx(name)] ?? "";
+
+    const out = rows.slice(1).map((r) => {
+      const name = String(get(r, "name") || "");
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      const points = Number(get(r, "points") || 0);
+      const games = Number(get(r, "games") || 0);
+      const avgFromSheet = get(r, "avgpoints");
+      const avgPoints = avgFromSheet !== "" ? Number(avgFromSheet) : games ? points / games : 0;
+
+      return {
+        id: String(get(r, "id") || slug),
+        name,
+        club: String(get(r, "club") || ""),
+        division: String(get(r, "division") || ""),
+        signature: String(get(r, "signature") || ""),
+        story: String(get(r, "story") || ""),
+        type: String(get(r, "type") || "rising").toLowerCase(),
+        points,
+        games,
+        avgPoints: Number.isFinite(avgPoints) ? Number(avgPoints) : 0,
+      };
+    });
+
+    return json(200, out);
+  } catch (e: any) {
+    console.error("managers error", e?.message || e);
+    // IMPORTANT: still return JSON (not an HTML error page)
+    return json(200, []);
   }
 };
