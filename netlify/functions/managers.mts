@@ -7,6 +7,10 @@ export default async (req: Request, _ctx: Context) => {
   if (req.method === "OPTIONS") return okCors();
   if (req.method !== "GET") return json(405, { error:"Method not allowed" });
 
+if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_SERVICE_ACCOUNT) {
+  return new Response(JSON.stringify([]), { status: 200, headers: { "Content-Type": "application/json" } });
+}
+
   try{
     const sheets = await getSheets();
     const res = await sheets.spreadsheets.values.get({
