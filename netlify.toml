@@ -6,6 +6,10 @@
 [build.environment]
   NODE_VERSION = "18"
 
+[functions]
+  external_node_modules = ["googleapis"]
+  node_bundler = "esbuild"
+
 # Your redirects for functions (keep the ones you already had)
 [[redirects]]
   from = "/api/managers"
