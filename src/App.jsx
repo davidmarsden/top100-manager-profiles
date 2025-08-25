@@ -49,9 +49,16 @@ function SiteHeader() {
 }
 
 /* ---------------------------------- Home -------------------------------- */
+/* ---------------------------------- Home -------------------------------- */
 function Home() {
   const [items, setItems] = useState(null);
   const [error, setError] = useState("");
+
+  // search UI state
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const [div, setDiv] = useState("");
+  const [type, setType] = useState("");
 
   useEffect(() => {
     let on = true;
@@ -66,23 +73,89 @@ function Home() {
     return () => (on = false);
   }, []);
 
+  // computed filtered list
+  const filtered = useMemo(() => {
+    if (!Array.isArray(items)) return [];
+    const term = q.trim().toLowerCase();
+    return items.filter((m) => {
+      const matchesText =
+        !term ||
+        [m.name, m.club, m.signature, m.story]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(term));
+      const matchesDiv = !div || String(m.division || "").toLowerCase() === div.toLowerCase();
+      const matchesType = !type || String(m.type || "").toLowerCase() === type.toLowerCase();
+      return matchesText && matchesDiv && matchesType;
+    });
+  }, [items, q, div, type]);
+
+  const clearFilters = () => {
+    setQ("");
+    setDiv("");
+    setType("");
+  };
+
   return (
     <main className="container stack">
       <h1 className="m0">Celebrating 25 seasons of Soccer Manager Worlds</h1>
 
       <div className="cluster">
         <a href="#/request" className="btn">+ Submit Your Profile</a>
-        <button className="btn">🔎 Search Managers</button>
+        <button className="btn" onClick={() => setOpen((v) => !v)}>
+          {open ? "✖ Close Search" : "🔎 Search Managers"}
+        </button>
       </div>
 
-      {error && <div className="card" style={{ borderLeft: "4px solid var(--err)" }}>{error}</div>}
+      {/* Search panel */}
+      {open && (
+        <div className="card search-panel">
+          <div className="grid" style={{ "--min": "220px" }}>
+            <label className="stack">
+              <strong>Search</strong>
+              <input
+                placeholder="Name, club, quote, story…"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+            </label>
 
+            <label className="stack">
+              <strong>Division</strong>
+              <input
+                placeholder="e.g. 1"
+                value={div}
+                onChange={(e) => setDiv(e.target.value)}
+              />
+            </label>
+
+            <label className="stack">
+              <strong>Type</strong>
+              <select value={type} onChange={(e) => setType(e.target.value)}>
+                <option value="">Any</option>
+                <option value="rising">rising</option>
+                <option value="legend">legend</option>
+                <option value="hall-of-fame">hall-of-fame</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="cluster" style={{ justifyContent: "space-between" }}>
+            <span className="muted">
+              Showing {filtered.length}
+              {items ? ` of ${items.length}` : ""} result{filtered.length === 1 ? "" : "s"}
+            </span>
+            <button className="btn" onClick={clearFilters}>Reset</button>
+          </div>
+        </div>
+      )}
+
+      {error && <div className="card" style={{ borderLeft: "4px solid var(--err)" }}>{error}</div>}
       {!items && !error && <div className="card">Loading…</div>}
 
       {items && (
-        items.length ? (
+        filtered.length ? (
           <section className="grid">
-            {items.map(m => (
+            {filtered.map((m) => (
               <article key={m.id} className="card manager-card">
                 <h3 className="title">{m.name}</h3>
                 <p className="subtitle">{m.club}</p>
@@ -96,7 +169,7 @@ function Home() {
             ))}
           </section>
         ) : (
-          <div className="card">No managers yet.</div>
+          <div className="card">No matches. Try changing your search or filters.</div>
         )
       )}
 
