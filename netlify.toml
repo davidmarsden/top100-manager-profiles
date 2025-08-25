@@ -27,6 +27,13 @@
   force = true
 
 [[redirects]]
+  from = "/api/profile-request/"
+  to = "/.netlify/functions/profile-request"
+  status = 200
+  force = true
+
+
+[[redirects]]
   from = "/api/manager"
   to   = "/.netlify/functions/manager"
   status = 200
