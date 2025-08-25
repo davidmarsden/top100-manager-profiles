@@ -1,10 +1,11 @@
+// netlify/functions/_sheets.mts
 import { google } from 'googleapis';
 
 export const SHEET_ID = Netlify.env.get("GOOGLE_SHEET_ID");
 export const TAB_SUBMISSIONS = "Submissions";
 export const TAB_MANAGERS = "Managers";
 
-// EXACT header order for Submissions:
+// EXACT header order for Submissions (must match the Submissions tab row 1):
 export const SUBMISSION_COLUMNS = [
   "Timestamp",
   "Request ID",
@@ -21,8 +22,27 @@ export const SUBMISSION_COLUMNS = [
   "Status",
 ];
 
+// === Managers columns ===
+// Update your Google Sheet "Managers" tab first row to match this EXACT order.
 export const MANAGER_COLUMNS = [
-  "id","name","club","division","signature","story"
+  "id",
+  "name",
+  "club",
+  "division",
+  "signature",
+  "story",
+  // Extended fields used by individual profile pages:
+  "careerHighlights",
+  "favouriteFormation",
+  "tacticalPhilosophy",
+  "memorableMoment",
+  "fearedOpponent",
+  "ambitions",
+  // Optional numeric/meta fields (kept for cards/sorting; safe to leave blank):
+  "type",
+  "points",
+  "games",
+  "avgPoints",
 ];
 
 function parseServiceAccount() {
@@ -39,6 +59,7 @@ export async function getSheets() {
     creds.client_email,
     undefined,
     creds.private_key,
+    // RW scope so we can append/update both tabs
     ["https://www.googleapis.com/auth/spreadsheets"]
   );
   return google.sheets({ version: "v4", auth: jwt });
@@ -59,7 +80,9 @@ export function json(status: number, body: unknown) {
   });
 }
 
-export function okCors() { return new Response(null, { status: 200, headers: corsHeaders() }); }
+export function okCors() {
+  return new Response(null, { status: 200, headers: corsHeaders() });
+}
 
 export function toRow(obj: Record<string, any>, cols: string[]) {
   return cols.map(c => obj[c] ?? "");
@@ -73,6 +96,10 @@ export function mapRow(header: string[], row: string[]) {
 
 export function colLetters(zeroBasedIndex: number) {
   let s = "", x = zeroBasedIndex + 1;
-  while (x > 0) { const m = (x - 1) % 26; s = String.fromCharCode(65 + m) + s; x = Math.floor((x - 1) / 26); }
+  while (x > 0) {
+    const m = (x - 1) % 26;
+    s = String.fromCharCode(65 + m) + s;
+    x = Math.floor((x - 1) / 26);
+  }
   return s;
 }
