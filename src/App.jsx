@@ -1,693 +1,528 @@
+// src/App.jsx
 import React, { useEffect, useMemo, useState } from "react";
+import "./index.css";
 
-/* ----------------------------- Utilities ----------------------------- */
+/* -------------------------------------------------------
+   Small utilities
+--------------------------------------------------------*/
+const API = {
+  // Use the more reliable direct path for this one function.
+  submissions: "/.netlify/functions/profile-request",
+  managers: "/api/managers",
+  manager: (id) => `/api/manager?id=${encodeURIComponent(id)}`
+};
 
-const fetchJSON = async (url, init) => {
-  const res = await fetch(url, init);
-  const txt = await res.text();
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  // If the function/route returned an HTML 404, throw a readable error.
-  const ctype = res.headers.get("content-type") || "";
-  if (!ctype.includes("application/json")) {
-    throw new Error(
-      `Non-JSON response from ${url} (status ${res.status}): ${txt.slice(0, 160)}…`
-    );
-  }
+async function fetchJSON(url, opts) {
+  const res = await fetch(url, opts);
+  const text = await res.text();
   try {
-    return JSON.parse(txt);
-  } catch {
-    throw new Error(`Invalid JSON from ${url}: ${txt.slice(0, 160)}…`);
+    const data = JSON.parse(text);
+    if (!res.ok) throw new Error(data?.error || data?.message || res.statusText);
+    return data;
+  } catch (e) {
+    // Non-JSON (e.g. HTML error page)
+    throw new Error(`Non-JSON response from ${url} (status ${res.status}): ${text.slice(0, 200)}…`);
   }
-};
-
-const slugify = (s) =>
-  String(s || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-/* ------------------------------ Styling ------------------------------ */
-
-const pageBg = {
-  minHeight: "100vh",
-  background:
-    "linear-gradient(135deg, #f9c2d1 0%, #f8b3c8 25%, #b6d7f5 70%, #d9c2f8 100%)",
-};
-const card = {
-  background: "rgba(255,255,255,0.95)",
-  borderRadius: 16,
-  boxShadow: "0 8px 26px rgba(0,0,0,0.12)",
-};
-
-/* ------------------------------ App Bar ------------------------------ */
-
-function AppBar({ title, right }) {
-  return (
-    <div
-      style={{
-        background: "linear-gradient(90deg,#ff9aa2,#fecfef)",
-        color: "#111827",
-        padding: "12px 18px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        fontWeight: 700,
-      }}
-    >
-      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <span role="img" aria-label="ball">
-          ⚽
-        </span>
-        <span>{title}</span>
-      </div>
-      <div>{right}</div>
-    </div>
-  );
 }
 
-/* ------------------------------ Home ------------------------------ */
-
-function Home() {
-  const [list, setList] = useState([]);
-  const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const data = await fetchJSON("/api/managers");
-        if (mounted) setList(Array.isArray(data) ? data : []);
-      } catch (e) {
-        setErr(String(e.message || e));
-      } finally {
-        setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  // Pick two randoms for the hero
-  const featured = useMemo(() => {
-    if (list.length <= 2) return list;
-    const i = Math.floor(Math.random() * list.length);
-    let j = Math.floor(Math.random() * list.length);
-    if (j === i) j = (j + 1) % list.length;
-    return [list[i], list[j]];
-  }, [list]);
-
-  return (
-    <div style={pageBg}>
-      <AppBar
-        title="Top 100 Manager Profiles"
-        right={
-          <button
-            onClick={() => (window.location.hash = "#/request")}
-            style={{
-              padding: "8px 12px",
-              borderRadius: 10,
-              border: "2px solid #111827",
-              background: "white",
-              cursor: "pointer",
-              fontWeight: 700,
-            }}
-          >
-            + Submit Your Profile
-          </button>
-        }
-      />
-      <div style={{ maxWidth: 1100, margin: "24px auto", padding: "0 16px" }}>
-        <p style={{ color: "#111827", fontSize: 18, marginBottom: 18 }}>
-          Celebrating 25 seasons of Soccer Manager Worlds
-        </p>
-
-        <div style={{ marginBottom: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button
-            onClick={() => (window.location.hash = "#/request")}
-            style={{ ...card, padding: "10px 14px", cursor: "pointer", border: "none" }}
-          >
-            ➕ Submit Your Profile
-          </button>
-          <button
-            onClick={() => (window.location.hash = "#/search")}
-            style={{ ...card, padding: "10px 14px", cursor: "pointer", border: "none" }}
-          >
-            🔎 Search Managers
-          </button>
-        </div>
-
-        {err && (
-          <div
-            style={{
-              ...card,
-              padding: 12,
-              borderLeft: "6px solid #dc2626",
-              color: "#b91c1c",
-              marginBottom: 16,
-            }}
-          >
-            {err}
-          </div>
-        )}
-
-        {loading ? (
-          <div style={{ ...card, padding: 20 }}>Loading…</div>
-        ) : featured.length === 0 ? (
-          <div style={{ ...card, padding: 20 }}>No managers yet.</div>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-              gap: 16,
-            }}
-          >
-            {featured.map((m) => (
-              <ManagerCard key={m.id || m.name} m={m} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+function cls(...xs) {
+  return xs.filter(Boolean).join(" ");
 }
 
-function ManagerCard({ m }) {
-  const slug = slugify(m.id || m.name);
+/* -------------------------------------------------------
+   UI atoms
+--------------------------------------------------------*/
+function Button({ children, icon, className, ...rest }) {
   return (
-    <div style={{ ...card, padding: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-        <div>
-          <div style={{ fontWeight: 800, fontSize: 18, color: "#111827" }}>{m.name}</div>
-          <div style={{ color: "#6b7280" }}>{m.club}</div>
-        </div>
-        <div style={{ display: "flex", gap: 6 }}>
-          <Badge>Div {m.division || "—"}</Badge>
-          <Badge tone="blue">{(m.type || "rising").toLowerCase()}</Badge>
-        </div>
-      </div>
-
-      {m.signature && (
-        <p
-          style={{
-            marginTop: 12,
-            fontStyle: "italic",
-            color: "#374151",
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
-        >
-          “{m.signature}”
-        </p>
+    <button
+      className={cls(
+        "px-4 py-2 rounded-xl bg-white/80 hover:bg-white shadow-sm border border-white/60",
+        "backdrop-blur text-sm font-medium flex items-center gap-2",
+        className
       )}
-
-      <div style={{ marginTop: 12 }}>
-        <a
-          href={`#/profile/${slug}`}
-          onClick={(e) => {
-            e.preventDefault();
-            window.location.hash = `#/profile/${slug}`;
-          }}
-          style={{ color: "#be185d", fontWeight: 600 }}
-        >
-          View Profile →
-        </a>
-      </div>
-    </div>
+      {...rest}
+    >
+      {icon ? <span className="opacity-70">{icon}</span> : null}
+      {children}
+    </button>
   );
 }
 
-function Badge({ children, tone }) {
+function Badge({ children, tone = "neutral" }) {
   const tones = {
-    blue: { bg: "#dbeafe", fg: "#1e40af" },
-    amber: { bg: "#fde68a", fg: "#92400e" },
-    gray: { bg: "#e5e7eb", fg: "#374151" },
+    neutral: "bg-black/10 text-black/70",
+    warn: "bg-amber-100 text-amber-800",
+    good: "bg-emerald-100 text-emerald-800",
+    bad: "bg-rose-100 text-rose-800",
+    info: "bg-sky-100 text-sky-800",
   };
-  const t = tones[tone] || tones.gray;
   return (
-    <span
-      style={{
-        background: t.bg,
-        color: t.fg,
-        borderRadius: 999,
-        padding: "4px 10px",
-        fontSize: 12,
-        fontWeight: 700,
-      }}
-    >
+    <span className={cls("px-2 py-0.5 rounded-full text-xs font-semibold", tones[tone] || tones.neutral)}>
       {children}
     </span>
   );
 }
 
-/* ------------------------------ Search ------------------------------ */
-
-function SearchPage() {
-  const [q, setQ] = useState("");
-  const [list, setList] = useState([]);
-  const [err, setErr] = useState("");
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const data = await fetchJSON("/api/managers");
-        if (mounted) setList(Array.isArray(data) ? data : []);
-      } catch (e) {
-        setErr(String(e.message || e));
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const filtered = useMemo(() => {
-    const t = q.toLowerCase();
-    return list.filter((m) => {
-      const hay = [
-        m.name,
-        m.club,
-        m.favouriteFormation,
-        m.tacticalPhilosophy,
-        m.careerHighlights,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(t);
-    });
-  }, [q, list]);
-
+function Card({ children, className }) {
   return (
-    <div style={pageBg}>
-      <AppBar title="Search Managers" right={<BackBtn />} />
-      <div style={{ maxWidth: 1100, margin: "24px auto", padding: "0 16px" }}>
-        <div style={{ ...card, padding: 12, marginBottom: 16 }}>
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search by name, club, formation, philosophy, highlights…"
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              border: "2px solid #e5e7eb",
-              borderRadius: 10,
-              fontSize: 16,
-            }}
-          />
-        </div>
-
-        {err && (
-          <div
-            style={{
-              ...card,
-              padding: 12,
-              borderLeft: "6px solid #dc2626",
-              color: "#b91c1c",
-            }}
-          >
-            {err}
-          </div>
-        )}
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-            gap: 16,
-          }}
-        >
-          {filtered.map((m) => (
-            <ManagerCard key={m.id || m.name} m={m} />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BackBtn() {
-  return (
-    <button
-      onClick={() => (window.location.hash = "#/")}
-      style={{
-        padding: "8px 12px",
-        borderRadius: 10,
-        border: "2px solid #111827",
-        background: "white",
-        cursor: "pointer",
-        fontWeight: 700,
-      }}
-    >
-      ← Back
-    </button>
-  );
-}
-
-/* ------------------------------ Profile ------------------------------ */
-
-function Profile() {
-  const slug = decodeURIComponent((window.location.hash.split("/")[2] || "").trim());
-  const [m, setM] = useState(null);
-  const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const data = await fetchJSON(`/api/manager?id=${encodeURIComponent(slug)}`);
-        if (mounted) setM(data || null);
-      } catch (e) {
-        setErr(String(e.message || e));
-      } finally {
-        setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [slug]);
-
-  return (
-    <div style={pageBg}>
-      <AppBar title="Manager Profile" right={<BackBtn />} />
-      <div style={{ maxWidth: 900, margin: "24px auto", padding: "0 16px" }}>
-        {err && (
-          <div
-            style={{
-              ...card,
-              padding: 12,
-              borderLeft: "6px solid #dc2626",
-              color: "#b91c1c",
-              marginBottom: 16,
-            }}
-          >
-            {err}
-          </div>
-        )}
-        {loading ? (
-          <div style={{ ...card, padding: 20 }}>Loading…</div>
-        ) : !m ? (
-          <div style={{ ...card, padding: 20 }}>Not found.</div>
-        ) : (
-          <div style={{ ...card, padding: 20 }}>
-            <h1 style={{ margin: 0, fontSize: 32 }}>{m.name}</h1>
-            <div style={{ color: "#6b7280", marginBottom: 8 }}>{m.club}</div>
-            <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-              <Badge>Division {m.division || "—"}</Badge>
-              <Badge tone="blue">{(m.type || "rising").toLowerCase()}</Badge>
-            </div>
-
-            <GridStats m={m} />
-
-            {m.careerHighlights && <Field title="Career Highlights" text={m.careerHighlights} />}
-            {m.favouriteFormation && <Field title="Favourite Formation" text={m.favouriteFormation} />}
-            {m.tacticalPhilosophy && <Field title="Tactical Philosophy" text={m.tacticalPhilosophy} />}
-            {m.memorableMoment && <Field title="Most Memorable Moment" text={m.memorableMoment} />}
-            {m.fearedOpponent && <Field title="Most Feared Opponent" text={m.fearedOpponent} />}
-            {m.ambitions && <Field title="Future Ambitions" text={m.ambitions} />}
-            {m.story && <Field title="Top 100 Journey" text={m.story} />}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function GridStats({ m }) {
-  const fmt = (n) => (typeof n === "number" ? n : Number(n || 0));
-  const fmtAvg = (n) => (Number.isFinite(+n) ? (+n).toFixed(2) : "0.00");
-  const cells = [
-    { label: "Total Points", value: fmt(m.points || 0) },
-    { label: "Games Played", value: fmt(m.games || 0) },
-    { label: "Avg Points", value: fmtAvg(m.avgPoints || 0) },
-  ];
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(180px,1fr))",
-        gap: 10,
-        marginBottom: 18,
-      }}
-    >
-      {cells.map((c) => (
-        <div key={c.label} style={{ background: "#f9fafb", borderRadius: 10, padding: 12 }}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "#111827" }}>{c.value}</div>
-          <div style={{ color: "#6b7280" }}>{c.label}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function Field({ title, text }) {
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ fontWeight: 800, color: "#111827", marginBottom: 6 }}>{title}</div>
-      <div style={{ whiteSpace: "pre-line", color: "#374151" }}>{text}</div>
-    </div>
-  );
-}
-
-/* --------------------------- Submit (Request) --------------------------- */
-
-function RequestForm() {
-  const [payload, setPayload] = useState({
-    managerName: "",
-    clubName: "",
-    division: "",
-    careerHighlights: "",
-    favouriteFormation: "",
-    tacticalPhilosophy: "",
-    mostMemorableMoment: "",
-    mostFearedOpponent: "",
-    futureAmbitions: "",
-    story: "",
-  });
-  const [sending, setSending] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [err, setErr] = useState("");
-
-  const set = (k) => (e) => setPayload((p) => ({ ...p, [k]: e.target.value }));
-
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    setSending(true);
-    setErr("");
-    setMsg("");
-    try {
-      const res = await fetchJSON("/api/profile-request", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          "Manager Name": payload.managerName,
-          "Club Name": payload.clubName,
-          Division: payload.division,
-          "Career Highlights": payload.careerHighlights,
-          "Favourite Formation": payload.favouriteFormation,
-          "Tactical Philosophy": payload.tacticalPhilosophy,
-          "Most Memorable Moment": payload.mostMemorableMoment,
-          "Most Feared Opponent": payload.mostFearedOpponent,
-          "Future Ambitions": payload.futureAmbitions,
-          Story: payload.story,
-        }),
-      });
-      if (res?.success) {
-        setMsg("Thanks! Your profile was submitted.");
-        setPayload({
-          managerName: "",
-          clubName: "",
-          division: "",
-          careerHighlights: "",
-          favouriteFormation: "",
-          tacticalPhilosophy: "",
-          mostMemorableMoment: "",
-          mostFearedOpponent: "",
-          futureAmbitions: "",
-          story: "",
-        });
-      } else {
-        throw new Error(res?.error || "Unexpected response");
-      }
-    } catch (e) {
-      setErr(String(e.message || e));
-    } finally {
-      setSending(false);
-    }
-  };
-
-  return (
-    <div style={pageBg}>
-      <AppBar title="Submit Your Manager Profile" right={<BackBtn />} />
-      <div style={{ maxWidth: 900, margin: "24px auto", padding: "0 16px" }}>
-        {err && (
-          <div
-            style={{
-              ...card,
-              padding: 12,
-              borderLeft: "6px solid #dc2626",
-              color: "#b91c1c",
-              marginBottom: 16,
-            }}
-          >
-            {err}
-          </div>
-        )}
-        {msg && (
-          <div
-            style={{
-              ...card,
-              padding: 12,
-              borderLeft: "6px solid #16a34a",
-              color: "#065f46",
-              marginBottom: 16,
-            }}
-          >
-            {msg}
-          </div>
-        )}
-
-        <form onSubmit={onSubmit} style={{ ...card, padding: 16 }}>
-          <TwoCol>
-            <FieldInput label="Manager Name *" value={payload.managerName} onChange={set("managerName")} required />
-            <FieldInput label="Club Name *" value={payload.clubName} onChange={set("clubName")} required />
-          </TwoCol>
-
-          <TwoCol>
-            <FieldInput label="Division" value={payload.division} onChange={set("division")} placeholder="1–5" />
-            <FieldInput
-              label="Favourite Formation"
-              value={payload.favouriteFormation}
-              onChange={set("favouriteFormation")}
-              placeholder="4-3-3, 4-2-3-1…"
-            />
-          </TwoCol>
-
-          <FieldTextarea
-            label="Career Highlights"
-            value={payload.careerHighlights}
-            onChange={set("careerHighlights")}
-          />
-          <FieldTextarea
-            label="Tactical Philosophy"
-            value={payload.tacticalPhilosophy}
-            onChange={set("tacticalPhilosophy")}
-          />
-          <TwoCol>
-            <FieldInput
-              label="Most Memorable Moment"
-              value={payload.mostMemorableMoment}
-              onChange={set("mostMemorableMoment")}
-            />
-            <FieldInput
-              label="Most Feared Opponent"
-              value={payload.mostFearedOpponent}
-              onChange={set("mostFearedOpponent")}
-            />
-          </TwoCol>
-          <FieldTextarea
-            label="Future Ambitions"
-            value={payload.futureAmbitions}
-            onChange={set("futureAmbitions")}
-          />
-          <FieldTextarea label="Your Top 100 Story" value={payload.story} onChange={set("story")} />
-
-          <div style={{ marginTop: 12 }}>
-            <button
-              type="submit"
-              disabled={sending}
-              style={{
-                padding: "10px 14px",
-                borderRadius: 10,
-                border: "2px solid #111827",
-                background: "white",
-                cursor: "pointer",
-                fontWeight: 700,
-                opacity: sending ? 0.65 : 1,
-              }}
-            >
-              {sending ? "Submitting…" : "Submit Profile"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function TwoCol({ children }) {
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-        gap: 12,
-      }}
-    >
+    <div className={cls("rounded-2xl bg-white/85 shadow-md border border-white/60 p-4", className)}>
       {children}
     </div>
   );
 }
-function FieldInput({ label, ...rest }) {
+
+function ErrorBar({ error, onClose }) {
+  if (!error) return null;
   return (
-    <label style={{ display: "block" }}>
-      <div style={{ fontWeight: 700, marginBottom: 6, color: "#111827" }}>{label}</div>
-      <input
-        {...rest}
-        style={{
-          width: "100%",
-          padding: "10px 12px",
-          border: "2px solid #e5e7eb",
-          borderRadius: 10,
-          fontSize: 16,
-        }}
-      />
-    </label>
-  );
-}
-function FieldTextarea({ label, ...rest }) {
-  return (
-    <label style={{ display: "block" }}>
-      <div style={{ fontWeight: 700, margin: "10px 0 6px", color: "#111827" }}>{label}</div>
-      <textarea
-        {...rest}
-        rows={4}
-        style={{
-          width: "100%",
-          padding: "10px 12px",
-          border: "2px solid #e5e7eb",
-          borderRadius: 10,
-          fontSize: 16,
-        }}
-      />
-    </label>
+    <div className="max-w-5xl mx-auto mt-4">
+      <div className="rounded-xl px-4 py-3 bg-rose-50 text-rose-800 border border-rose-200 shadow-sm flex justify-between items-start gap-3">
+        <div className="text-sm leading-relaxed">
+          {String(error)}
+        </div>
+        <button className="text-rose-700 text-sm underline" onClick={onClose}>dismiss</button>
+      </div>
+    </div>
   );
 }
 
-/* ------------------------------- Router ------------------------------- */
+/* -------------------------------------------------------
+   Layout + Header
+--------------------------------------------------------*/
+function Shell({ children, right }) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-pink-200 via-sky-100 to-violet-200">
+      <header className="sticky top-0 z-10 bg-gradient-to-r from-pink-200 to-pink-100/90 border-b border-white/60 backdrop-blur">
+        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+          <a href="#/" className="font-semibold">⚽ Top 100 Manager Profiles</a>
+          <div className="flex items-center gap-2">
+            <a href="#/request">
+              <Button className="hidden sm:flex">+ Submit Your Profile</Button>
+            </a>
+            {right}
+          </div>
+        </div>
+      </header>
+      <main className="max-w-5xl mx-auto px-4 py-8">{children}</main>
+      <footer className="py-10 text-center text-xs text-black/50">
+        <a className="underline" href="https://smtop100.blog/">Back to smtop100.blog</a>
+      </footer>
+    </div>
+  );
+}
 
-export default function App() {
-  const [hash, setHash] = useState(() => window.location.hash || "#/");
+/* -------------------------------------------------------
+   Home (list from /api/managers)
+--------------------------------------------------------*/
+function Home() {
+  const [items, setItems] = useState([]);
+  const [err, setErr] = useState("");
 
   useEffect(() => {
-    const onHash = () => setHash(window.location.hash || "#/");
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await fetchJSON(API.managers);
+        if (mounted) setItems(Array.isArray(data) ? data : []);
+      } catch (e) {
+        setErr(e.message || String(e));
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  return (
+    <Shell
+      right={
+        <a href="#/admin">
+          <Button className="hidden sm:flex" icon={"🛠️"}>Admin</Button>
+        </a>
+      }
+    >
+      <ErrorBar error={err} onClose={() => setErr("")} />
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold mb-1">Celebrating 25 seasons of Soccer Manager Worlds</h1>
+        <div className="flex gap-3">
+          <a href="#/request"><Button icon={"➕"}>Submit Your Profile</Button></a>
+          <a href="#/search"><Button icon={"🔎"}>Search Managers</Button></a>
+        </div>
+      </div>
+
+      {items.length === 0 ? (
+        <Card>No managers yet.</Card>
+      ) : (
+        <div className="grid gap-4">
+          {items.map((m) => (
+            <Card key={m.id} className="flex items-start justify-between">
+              <div>
+                <div className="text-lg font-semibold">{m.name}</div>
+                <div className="text-sm text-black/60">{m.club}</div>
+                <div className="italic text-black/70 mt-2">“{m.signature || "—"}”</div>
+                <div className="mt-3">
+                  <a href={`#/profile/${encodeURIComponent(m.id)}`} className="text-pink-700 font-semibold underline">
+                    View Profile →
+                  </a>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {m.division ? <Badge>Div {m.division}</Badge> : null}
+                <Badge tone="info">{m.type || "rising"}</Badge>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </Shell>
+  );
+}
+
+/* -------------------------------------------------------
+   Request form (unchanged fields; posts to profile-request)
+--------------------------------------------------------*/
+function RequestForm() {
+  const [form, setForm] = useState({
+    "Manager Name": "",
+    "Club Name": "",
+    "Division": "",
+    "Favourite Formation": "",
+    "Career Highlights": "",
+    "Tactical Philosophy": "",
+    "Most Memorable Moment": "",
+    "Most Feared Opponent": "",
+    "Future Ambitions": "",
+    "Your Top 100 Story": "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  function setField(k, v) {
+    setForm((f) => ({ ...f, [k]: v }));
+  }
+
+  async function onSubmit(e) {
+    e.preventDefault();
+    setSaving(true); setErr(""); setMsg("");
+    try {
+      const payload = {
+        "Manager Name": form["Manager Name"],
+        "Club Name": form["Club Name"],
+        "Division": form["Division"],
+        "Favourite Formation": form["Favourite Formation"],
+        "Career Highlights": form["Career Highlights"],
+        "Tactical Philosophy": form["Tactical Philosophy"],
+        "Most Memorable Moment": form["Most Memorable Moment"],
+        "Most Feared Opponent": form["Most Feared Opponent"],
+        "Future Ambitions": form["Future Ambitions"],
+        "Your Top 100 Story": form["Your Top 100 Story"],
+      };
+      const res = await fetchJSON(API.submissions, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      setMsg(`Submitted ✔ (id: ${res.submissionId || "n/a"})`);
+      setForm({
+        "Manager Name": "",
+        "Club Name": "",
+        "Division": "",
+        "Favourite Formation": "",
+        "Career Highlights": "",
+        "Tactical Philosophy": "",
+        "Most Memorable Moment": "",
+        "Most Feared Opponent": "",
+        "Future Ambitions": "",
+        "Your Top 100 Story": "",
+      });
+    } catch (e) {
+      setErr(e.message || String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const Field = ({label, name, type="text", textarea=false, required=false}) => (
+    <div className="mb-4">
+      <label className="block text-sm font-semibold mb-1">{label}{required ? " *" : ""}</label>
+      {textarea ? (
+        <textarea
+          className="w-full rounded-xl border border-black/10 bg-white/80 p-3 min-h-[110px]"
+          value={form[name] || ""}
+          onChange={(e)=>setField(name, e.target.value)}
+        />
+      ) : (
+        <input
+          type={type}
+          className="w-full rounded-xl border border-black/10 bg-white/80 p-3"
+          value={form[name] || ""}
+          onChange={(e)=>setField(name, e.target.value)}
+          required={required}
+        />
+      )}
+    </div>
+  );
+
+  return (
+    <Shell
+      right={<a href="#/"><Button>← Back</Button></a>}
+    >
+      <ErrorBar error={err} onClose={() => setErr("")} />
+      {msg && (
+        <div className="max-w-3xl mx-auto mb-4">
+          <div className="rounded-xl px-4 py-3 bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-sm">{msg}</div>
+        </div>
+      )}
+
+      <Card className="max-w-3xl mx-auto">
+        <h2 className="text-lg font-semibold mb-4">Submit Your Manager Profile</h2>
+        <form onSubmit={onSubmit}>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Manager Name" name="Manager Name" required />
+            <Field label="Club Name" name="Club Name" required />
+            <Field label="Division" name="Division" />
+            <Field label="Favourite Formation" name="Favourite Formation" />
+          </div>
+
+          <Field label="Career Highlights" name="Career Highlights" textarea />
+          <Field label="Tactical Philosophy" name="Tactical Philosophy" textarea />
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Most Memorable Moment" name="Most Memorable Moment" />
+            <Field label="Most Feared Opponent" name="Most Feared Opponent" />
+          </div>
+          <Field label="Future Ambitions" name="Future Ambitions" textarea />
+          <Field label="Your Top 100 Story" name="Your Top 100 Story" textarea />
+
+          <div className="pt-2">
+            <Button type="submit" disabled={saving}>{saving ? "Submitting…" : "Submit Profile"}</Button>
+          </div>
+        </form>
+      </Card>
+    </Shell>
+  );
+}
+
+/* -------------------------------------------------------
+   Admin Panel — Approve / Reject
+--------------------------------------------------------*/
+function AdminPanel() {
+  const [subs, setSubs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+  const [busyId, setBusyId] = useState("");
+
+  async function load() {
+    setErr(""); setLoading(true);
+    try {
+      const data = await fetchJSON(API.submissions);
+      // Expect array of row objects (from your function)
+      const items = Array.isArray(data) ? data : [];
+      // newest first by Timestamp if present
+      items.sort((a,b)=>String(b["Timestamp"]||"").localeCompare(String(a["Timestamp"]||"")));
+      setSubs(items);
+    } catch (e) {
+      setErr(e.message || String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function act(submissionId, action) {
+    setBusyId(submissionId);
+    setErr("");
+    try {
+      const res = await fetchJSON(API.submissions, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ action, submissionId })
+      });
+      // small pause so Google Sheets catches up; then refresh
+      await sleep(400);
+      await load();
+      alert(`${action === "approve" ? "Approved" : "Rejected"} ✔`);
+    } catch (e) {
+      setErr(e.message || String(e));
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  return (
+    <Shell right={<a href="#/"><Button>← Back</Button></a>}>
+      <ErrorBar error={err} onClose={() => setErr("")} />
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold mb-1">Admin — Profile Requests</h1>
+        <p className="text-sm text-black/60">Approve or reject submissions. Newest first.</p>
+      </div>
+
+      <Card>
+        {loading ? (
+          <div>Loading…</div>
+        ) : subs.length === 0 ? (
+          <div>No submissions.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="text-left border-b border-black/10">
+                  <th className="py-2 pr-4">When</th>
+                  <th className="py-2 pr-4">Manager</th>
+                  <th className="py-2 pr-4">Club</th>
+                  <th className="py-2 pr-4">Division</th>
+                  <th className="py-2 pr-4">Status</th>
+                  <th className="py-2 pr-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {subs.map((r) => {
+                  const id = r["Request ID"];
+                  const status = (r["Status"] || "").toLowerCase();
+                  const when = r["Timestamp"] ? new Date(r["Timestamp"]).toLocaleString() : "";
+                  return (
+                    <tr key={id} className="border-b border-black/5 align-top">
+                      <td className="py-2 pr-4 whitespace-nowrap">{when}</td>
+                      <td className="py-2 pr-4">{r["Manager Name"]}</td>
+                      <td className="py-2 pr-4">{r["Club Name"]}</td>
+                      <td className="py-2 pr-4">{r["Division"]}</td>
+                      <td className="py-2 pr-4">
+                        {status === "approved" ? <Badge tone="good">approved</Badge>
+                          : status === "rejected" ? <Badge tone="bad">rejected</Badge>
+                          : <Badge tone="warn">pending</Badge>}
+                      </td>
+                      <td className="py-2 pr-4">
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => act(id, "approve")}
+                            disabled={busyId === id || status === "approved"}
+                            className="bg-emerald-600 text-white hover:bg-emerald-700 border-emerald-700"
+                          >
+                            {busyId === id ? "Working…" : "Approve"}
+                          </Button>
+                          <Button
+                            onClick={() => act(id, "reject")}
+                            disabled={busyId === id || status === "rejected"}
+                            className="bg-rose-600 text-white hover:bg-rose-700 border-rose-700"
+                          >
+                            {busyId === id ? "Working…" : "Reject"}
+                          </Button>
+                        </div>
+                        <div className="text-[11px] text-black/50 mt-1 select-all">{id}</div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </Shell>
+  );
+}
+
+/* -------------------------------------------------------
+   Profile (read-only from /api/manager?id=…)
+--------------------------------------------------------*/
+function Profile({ slug }) {
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const json = await fetchJSON(API.manager(slug));
+        if (mounted) setData(json);
+      } catch (e) {
+        setErr(e.message || String(e));
+      }
+    })();
+    return () => { mounted = false; };
+  }, [slug]);
+
+  return (
+    <Shell right={<a href="#/"><Button>← Back</Button></a>}>
+      <ErrorBar error={err} onClose={() => setErr("")} />
+      {!data ? (
+        <Card>Loading…</Card>
+      ) : data.error ? (
+        <Card>Error: {data.error}</Card>
+      ) : (
+        <div className="grid gap-4">
+          <Card className="p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-semibold">{data.name}</h1>
+                <div className="text-black/60">{data.club}</div>
+                <div className="mt-2 flex gap-2">
+                  {data.division ? <Badge>Div {data.division}</Badge> : null}
+                  <Badge tone="info">{data.type || "rising"}</Badge>
+                </div>
+              </div>
+            </div>
+            <p className="italic mt-4">“{data.signature || "—"}”</p>
+          </Card>
+
+          <Card>
+            <h2 className="font-semibold mb-2">Story</h2>
+            <div className="whitespace-pre-wrap">{data.story || "—"}</div>
+          </Card>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Card>
+              <h3 className="font-semibold mb-2">Career Highlights</h3>
+              <div className="whitespace-pre-wrap">{data.careerHighlights || "—"}</div>
+            </Card>
+            <Card>
+              <h3 className="font-semibold mb-2">Favourite Formation</h3>
+              <div>{data.favouriteFormation || "—"}</div>
+            </Card>
+            <Card>
+              <h3 className="font-semibold mb-2">Tactical Philosophy</h3>
+              <div className="whitespace-pre-wrap">{data.tacticalPhilosophy || "—"}</div>
+            </Card>
+            <Card>
+              <h3 className="font-semibold mb-2">Most Memorable Moment</h3>
+              <div className="whitespace-pre-wrap">{data.memorableMoment || "—"}</div>
+            </Card>
+            <Card>
+              <h3 className="font-semibold mb-2">Most Feared Opponent</h3>
+              <div>{data.fearedOpponent || "—"}</div>
+            </Card>
+            <Card>
+              <h3 className="font-semibold mb-2">Future Ambitions</h3>
+              <div className="whitespace-pre-wrap">{data.ambitions || "—"}</div>
+            </Card>
+          </div>
+        </div>
+      )}
+    </Shell>
+  );
+}
+
+/* -------------------------------------------------------
+   Very tiny hash-router
+--------------------------------------------------------*/
+export default function App() {
+  const [route, setRoute] = useState(() => window.location.hash || "#/");
+
+  useEffect(() => {
+    const onHash = () => setRoute(window.location.hash || "#/");
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
-  const route = hash.replace(/^#/, "");
-  if (route.startsWith("/request")) return <RequestForm />;
-  if (route.startsWith("/profile/")) return <Profile />;
-  if (route.startsWith("/search")) return <SearchPage />;
-  return <Home />;
+  const content = useMemo(() => {
+    if (route.startsWith("#/request")) return <RequestForm />;
+    if (route.startsWith("#/profile/")) {
+      const slug = decodeURIComponent(route.replace("#/profile/", ""));
+      return <Profile slug={slug} />;
+    }
+    if (route.startsWith("#/admin")) return <AdminPanel />;
+    return <Home />;
+  }, [route]);
+
+  return content;
 }
