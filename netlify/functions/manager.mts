@@ -1,61 +1,50 @@
-// netlify/functions/manager.mts
-import { json } from "@netlify/functions";
+import { Handler } from "@netlify/functions";
 import { google } from "googleapis";
 
-export default async (req: Request) => {
+export const handler: Handler = async () => {
   try {
-    const url = new URL(req.url);
-    const id = url.searchParams.get("id") || "";
-    if (!id) return json(400, { error: "missing id" });
+    const creds = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT || "{}");
+    const sheetId = process.env.GOOGLE_SHEET_ID;
 
-    if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_SERVICE_ACCOUNT) {
-      console.warn("manager: missing env; returning stub");
-      return json(200, { id, name: "", club: "", division: "", type: "rising", points: 0, games: 0, avgPoints: 0, signature: "", story: "" });
+    if (!creds.client_email || !creds.private_key || !sheetId) {
+      throw new Error("Missing Google Sheets credentials");
     }
 
-    const svc = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT!);
-    const auth = new google.auth.JWT({
-      email: svc.client_email,
-      key: svc.private_key,
-      scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
-    });
+    const auth = new google.auth.JWT(
+      creds.client_email,
+      undefined,
+      creds.private_key,
+      ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+    );
+
     const sheets = google.sheets({ version: "v4", auth });
-
-    const { data } = await sheets.spreadsheets.values.get({
-      spreadsheetId: process.env.GOOGLE_SHEET_ID!,
-      range: "Managers!A1:Z",
+    const resp = await sheets.spreadsheets.values.get({
+      spreadsheetId: sheetId,
+      range: "Managers!A2:Z",
     });
 
-    const rows = data.values || [];
-    if (rows.length < 2) return json(404, { error: "not found" });
+    const rows = resp.data.values || [];
+    const managers = rows.map((r) => ({
+      id: r[0],
+      name: r[1],
+      club: r[2],
+      division: r[3],
+      signature: r[4],
+      story: r[5],
+    }));
 
-    const headers = rows[0].map((h) => String(h).trim().toLowerCase());
-    const idx = (name: string) => headers.indexOf(name);
-    const get = (r: any[], name: string) => r[idx(name)] ?? "";
-
-    const match = rows.slice(1).find((r) => String(get(r, "id") || "").toLowerCase() === id.toLowerCase());
-    if (!match) return json(404, { error: "not found" });
-
-    const name = String(get(match, "name") || "");
-    const points = Number(get(match, "points") || 0);
-    const games = Number(get(match, "games") || 0);
-    const avgFromSheet = get(match, "avgpoints");
-    const avgPoints = avgFromSheet !== "" ? Number(avgFromSheet) : games ? points / games : 0;
-
-    return json(200, {
-      id: String(get(match, "id") || id),
-      name,
-      club: String(get(match, "club") || ""),
-      division: String(get(match, "division") || ""),
-      type: String(get(match, "type") || "rising").toLowerCase(),
-      points,
-      games,
-      avgPoints: Number.isFinite(avgPoints) ? Number(avgPoints) : 0,
-      signature: String(get(match, "signature") || ""),
-      story: String(get(match, "story") || ""),
-    });
-  } catch (e: any) {
-    console.error("manager error", e?.message || e);
-    return json(404, { error: "not found" });
+    return {
+      statusCode: 200,
+      body: JSON.stringify(managers),
+    };
+  } catch (err: any) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: true,
+        message: err.message,
+        stack: err.stack,
+      }),
+    };
   }
 };
