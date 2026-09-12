@@ -2,14 +2,10 @@
   command = "npm run build"
   publish = "dist"
 
-[functions]
-  directory = "netlify/functions"
-  node_bundler = "esbuild"
-  external_node_modules = ["googleapis"]
-
-# Pretty API path → Functions (must be above any other redirects)
+# The standalone manager-profiles experiment is retired.
+# Stats & History is now the canonical home for manager records and profiles.
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
+  from = "/*"
+  to = "https://archive.smtop100.blog/#managers"
+  status = 301
   force = true
